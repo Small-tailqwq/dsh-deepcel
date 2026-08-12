@@ -1,0 +1,6 @@
+# Deepcel skin bundle patch: inserts its dshClient row into the web plugin roster.
+# Install with `dsh plugin --profile <name> add <path-or-git-url>`; skin mutual
+# exclusion remains owned by the profile's skin manager.
+- insert:
+    - id: ui-skin-deepcel
+      name: '@dsh-external/dsh-client-ui-skin-deepcel'

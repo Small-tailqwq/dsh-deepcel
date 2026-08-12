@@ -1,0 +1,2034 @@
+/* Deepcel-style worksheet skin. Every selector is scoped under the body marker
+   owned by apply(), so switching skins removes the entire visual surface. */
+
+body[data-dsh-deepcel] {
+  --deepcel-green: #217346;
+  --deepcel-green-dark: #185c37;
+  --deepcel-green-soft: #e2f0d9;
+  --deepcel-grid: #c9c9c9;
+  --deepcel-grid-strong: #a6a6a6;
+  --deepcel-sheet: #fff;
+  --deepcel-header: #f3f3f3;
+  --deepcel-ink: #202020;
+  --deepcel-muted: #666;
+  --deepcel-highlight: rgba(255, 235, 59, 0.56);
+  --deepcel-highlight-solid: #fff2a8;
+  --deepcel-selection: #107c41;
+  --deepcel-bookmark: #2b579a;
+  --deepcel-comment-accent: #c43e1c;
+  --deepcel-comment-fill: #fff7c7;
+  --deepcel-comment-header: #f7e89a;
+  --deepcel-cell-width: 60px;
+  --deepcel-row-height: 24px;
+  --deepcel-row-gutter: 40px;
+  --deepcel-sidebar-offset: 0px;
+  --deepcel-sheet-origin: calc(var(--deepcel-sidebar-offset) + var(--deepcel-row-gutter));
+  --deepcel-formula-height: 28px;
+  --deepcel-ribbon-height: 136px;
+  --dsw-font-family: Aptos, Calibri, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  --ds-font-family-code: Consolas, 'SFMono-Regular', monospace;
+  --dsw-alias-bg-base: #fff;
+  --dsw-alias-bg-layer-1: #fafafa;
+  --dsw-alias-bg-layer-2: #f3f3f3;
+  --dsw-alias-bg-layer-3: #e9e9e9;
+  --dsw-alias-bg-overlay: #fff;
+  --dsw-alias-bg-module-platform: #f7f7f7;
+  --dsw-alias-border-l1: #e1e1e1;
+  --dsw-alias-border-l2: #cfcfcf;
+  --dsw-alias-border-l2-darkmode-thin: #cfcfcf;
+  --dsw-alias-border-l3: #b8b8b8;
+  --dsw-alias-border-l4: #8f8f8f;
+  --dsw-alias-brand-primary: #217346;
+  --dsw-alias-brand-text: #185c37;
+  --dsw-alias-button-primary-fill: #217346;
+  --dsw-alias-button-primary-hover: #185c37;
+  --dsw-alias-button-info-fill: #217346;
+  --dsw-alias-button-info-hover: #185c37;
+  --dsw-alias-interactive-bg-hover: #edf5f0;
+  --dsw-alias-interactive-bg-hover-solid: #e2f0d9;
+  --dsw-alias-interactive-bg-active: #fff2a8;
+  --dsw-alias-label-primary: #202020;
+  --dsw-alias-label-secondary: #535353;
+  --dsw-alias-label-tertiary: #757575;
+  --dsw-alias-label-caption: #858585;
+  --dsw-alias-markdown-code-block: #f7f7f7;
+  --dsw-alias-markdown-code-block-banner: #ededed;
+  --dsw-alias-markdown-inline-code: #f3f3f3;
+  --dsw-specific-bubble: #fff;
+  --dsw-specific-bubble-highlight: #fff2a8;
+  --dsw-specific-input-major: #fff;
+  --dsw-specific-menu: #fff;
+  --dsw-specific-selector: #f3f3f3;
+  --dsw-specific-sidebar-fill: #fafafa;
+  --dsw-specific-sidebar-nav-item-active: #fff2a8;
+  --dsw-specific-sidebar-nav-item-active-accent: #107c41;
+  box-sizing: border-box;
+  min-width: 760px;
+  padding: var(--deepcel-ribbon-height) 0 28px;
+  color: var(--deepcel-ink);
+  background-color: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] {
+  --deepcel-grid: #454545;
+  --deepcel-grid-strong: #686868;
+  --deepcel-sheet: #1e1e1e;
+  --deepcel-header: #2b2b2b;
+  --deepcel-ink: #f0f0f0;
+  --deepcel-muted: #b7b7b7;
+  --deepcel-highlight: rgba(255, 214, 10, 0.34);
+  --deepcel-highlight-solid: #6f5d00;
+  --deepcel-selection: #33c481;
+  --deepcel-bookmark: #5b9bd5;
+  --deepcel-comment-accent: #ff8a65;
+  --deepcel-comment-fill: #4b431f;
+  --deepcel-comment-header: #625725;
+  --dsw-alias-bg-base: #1e1e1e;
+  --dsw-alias-bg-layer-1: #252525;
+  --dsw-alias-bg-layer-2: #2b2b2b;
+  --dsw-alias-bg-layer-3: #343434;
+  --dsw-alias-bg-overlay: #292929;
+  --dsw-alias-bg-module-platform: #292929;
+  --dsw-alias-border-l1: #3d3d3d;
+  --dsw-alias-border-l2: #505050;
+  --dsw-alias-border-l2-darkmode-thin: #505050;
+  --dsw-alias-border-l3: #666;
+  --dsw-alias-border-l4: #858585;
+  --dsw-alias-brand-primary: #33c481;
+  --dsw-alias-brand-text: #57d997;
+  --dsw-alias-button-primary-fill: #217346;
+  --dsw-alias-button-primary-hover: #2a8f5a;
+  --dsw-alias-button-info-fill: #217346;
+  --dsw-alias-button-info-hover: #2a8f5a;
+  --dsw-alias-interactive-bg-hover: #293b31;
+  --dsw-alias-interactive-bg-hover-solid: #324a3b;
+  --dsw-alias-interactive-bg-active: #6f5d00;
+  --dsw-alias-label-primary: #f0f0f0;
+  --dsw-alias-label-secondary: #cecece;
+  --dsw-alias-label-tertiary: #adadad;
+  --dsw-alias-label-caption: #929292;
+  --dsw-alias-markdown-code-block: #252525;
+  --dsw-alias-markdown-code-block-banner: #303030;
+  --dsw-alias-markdown-inline-code: #303030;
+  --dsw-specific-bubble: #252525;
+  --dsw-specific-bubble-highlight: #6f5d00;
+  --dsw-specific-input-major: #1e1e1e;
+  --dsw-specific-menu: #292929;
+  --dsw-specific-selector: #303030;
+  --dsw-specific-sidebar-fill: #252525;
+  --dsw-specific-sidebar-nav-item-active: #6f5d00;
+  --dsw-specific-sidebar-nav-item-active-accent: #33c481;
+  color: var(--deepcel-ink);
+  background-color: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel] *,
+body[data-dsh-deepcel] *::before,
+body[data-dsh-deepcel] *::after {
+  border-radius: 0 !important;
+}
+
+body[data-dsh-deepcel] ::selection {
+  color: inherit;
+  background: var(--deepcel-highlight);
+}
+
+/* The plugin chrome reconstructs a compact ribbon, formula bar, column
+   headers, sheet tabs, and a status strip entirely from text cells. */
+body[data-dsh-deepcel] .workbookChrome {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 1000000;
+  display: grid;
+  grid-template-rows: 30px 25px 34px var(--deepcel-formula-height) 19px;
+  height: var(--deepcel-ribbon-height);
+  color: #202020;
+  background: #fff;
+  border-bottom: 1px solid #a6a6a6;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  font: 12px/1 Aptos, Calibri, 'Segoe UI', sans-serif;
+  user-select: none;
+  pointer-events: none;
+}
+
+body[data-dsh-deepcel] .titleRow,
+body[data-dsh-deepcel] .ribbonTabs,
+body[data-dsh-deepcel] .toolRow,
+body[data-dsh-deepcel] .columnRow,
+body[data-dsh-deepcel] .statusChrome {
+  display: flex;
+  align-items: stretch;
+}
+
+body[data-dsh-deepcel] .titleRow,
+body[data-dsh-deepcel] .ribbonTabs,
+body[data-dsh-deepcel] .toolRow,
+body[data-dsh-deepcel] .columnRow {
+  pointer-events: auto;
+}
+
+body[data-dsh-deepcel] .ribbonTab[hidden] {
+  display: none;
+}
+
+/* The worksheet is a real viewport-sized cell matrix, not a painted grid.
+   Its origin is shared by the row/column chrome, selection, and merged input
+   ranges, so opening the native sidebar moves the whole workbook together. */
+body[data-dsh-deepcel] .worksheetGrid {
+  position: fixed;
+  inset: calc(var(--deepcel-ribbon-height) - var(--deepcel-row-height)) 0 28px var(--deepcel-sheet-origin);
+  z-index: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--deepcel-grid-columns), var(--deepcel-cell-width));
+  grid-auto-rows: var(--deepcel-row-height);
+  align-content: start;
+  justify-content: start;
+  overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+  transform: translateY(var(--deepcel-scroll-y, 0px));
+  will-change: transform;
+  transition: left var(--ds-transition-duration-slow, 240ms) var(--ds-ease-in-out, ease-in-out);
+}
+
+body[data-dsh-deepcel] .worksheetCell {
+  box-sizing: border-box;
+  width: var(--deepcel-cell-width);
+  height: var(--deepcel-row-height);
+  border-right: 1px solid var(--deepcel-grid);
+  border-bottom: 1px solid var(--deepcel-grid);
+}
+
+body[data-dsh-deepcel] .worksheetSelection {
+  position: fixed;
+  z-index: 1;
+  top: calc(
+    var(--deepcel-ribbon-height)
+    + var(--deepcel-selection-y, 0px)
+    + var(--deepcel-row-offset-y, 0px)
+    + var(--deepcel-scroll-y, 0px)
+  );
+  left: calc(var(--deepcel-sheet-origin) + var(--deepcel-selection-x, 0px));
+  display: none;
+  box-sizing: border-box;
+  width: var(--deepcel-selection-width, var(--deepcel-cell-width));
+  height: var(--deepcel-selection-height, var(--deepcel-row-height));
+  border: 2px solid var(--deepcel-selection);
+  box-shadow: inset 0 0 0 1px var(--deepcel-sheet);
+  pointer-events: none;
+  transition: left var(--ds-transition-duration-slow, 240ms) var(--ds-ease-in-out, ease-in-out);
+}
+
+body[data-dsh-deepcel] .worksheetSelection[data-active] {
+  display: block;
+}
+
+body[data-dsh-deepcel] .worksheetSelection[data-overlay] {
+  z-index: 4;
+}
+
+body[data-dsh-deepcel] .worksheetSelection[data-active]::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--deepcel-sheet);
+  background: var(--deepcel-selection);
+}
+
+body[data-dsh-deepcel] .rowChrome {
+  position: fixed;
+  inset: calc(var(--deepcel-ribbon-height) - var(--deepcel-row-height)) auto 28px var(--deepcel-sidebar-offset);
+  z-index: 999999;
+  display: flex;
+  width: var(--deepcel-row-gutter);
+  overflow: hidden;
+  flex-direction: column;
+  color: var(--deepcel-muted);
+  background: var(--deepcel-header);
+  border-right: 1px solid var(--deepcel-grid-strong);
+  font: 10px/var(--deepcel-row-height) Aptos, Calibri, 'Segoe UI', sans-serif;
+  user-select: none;
+  pointer-events: none;
+  transition: left var(--ds-transition-duration-slow, 240ms) var(--ds-ease-in-out, ease-in-out);
+}
+
+body[data-dsh-deepcel] .rowCell {
+  box-sizing: border-box;
+  flex: 0 0 var(--deepcel-row-height);
+  width: 100%;
+  height: var(--deepcel-row-height);
+  padding-right: 6px;
+  border-bottom: 1px solid var(--deepcel-grid);
+  text-align: right;
+}
+
+/* Native session/workspace HoverCards are portaled directly to body with a
+   product-level z-index. Lift that existing surface above worksheet row
+   chrome so coordinate labels cannot cut through its left edge. */
+body[data-dsh-deepcel] > [class*='_card'][style*='left'] {
+  z-index: 1000001 !important;
+}
+
+body[data-dsh-deepcel] .titleRow {
+  position: relative;
+  align-items: center;
+  color: #fff;
+  background: var(--deepcel-green);
+}
+
+body[data-dsh-deepcel] .quickCell,
+body[data-dsh-deepcel] .accountCell {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 11px;
+}
+
+body[data-dsh-deepcel] button.quickCell,
+body[data-dsh-deepcel] button.toolCell {
+  appearance: none;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+body[data-dsh-deepcel] button.quickCell:hover,
+body[data-dsh-deepcel] button.quickCell[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+body[data-dsh-deepcel] .titleCell {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: min(48vw, 680px);
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+body[data-dsh-deepcel] .headerControls {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  min-width: 0;
+}
+
+body[data-dsh-deepcel] :is(.topTitle, .topMode, .topToken) {
+  display: inline-flex;
+  align-items: center;
+  appearance: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body[data-dsh-deepcel] .topMode,
+body[data-dsh-deepcel] .topToken {
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+body[data-dsh-deepcel] button.topToken {
+  cursor: pointer;
+}
+
+body[data-dsh-deepcel] .headerControls .topToken {
+  height: 100%;
+  padding: 0 10px;
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
+  pointer-events: auto;
+}
+
+body[data-dsh-deepcel] .headerControls button.topToken:hover,
+body[data-dsh-deepcel] .headerControls button.topToken[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+body[data-dsh-deepcel] .accountCell {
+  margin-left: auto;
+  border-right: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+body[data-dsh-deepcel] .ribbonTabs {
+  background: #f7f7f7;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+body[data-dsh-deepcel] .ribbonTab {
+  display: inline-flex;
+  align-items: center;
+  appearance: none;
+  margin: 0;
+  padding: 0 16px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  border-right: 1px solid #e2e2e2;
+  color: #303030;
+}
+
+body[data-dsh-deepcel] .ribbonTab[data-active] {
+  color: #185c37;
+  background: #fff2a8;
+  box-shadow: inset 0 -2px #217346;
+  font-weight: 600;
+}
+
+body[data-dsh-deepcel] .toolRow {
+  padding-left: 8px;
+  background: #fff;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+body[data-dsh-deepcel] .toolCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  padding: 0 10px;
+  border-right: 1px solid #e1e1e1;
+  color: #3b3b3b;
+  font-size: 11px;
+}
+
+body[data-dsh-deepcel] button.toolCell {
+  appearance: none;
+  margin: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+body[data-dsh-deepcel] button.toolCell[aria-selected='true'] {
+  color: #185c37;
+  background: var(--deepcel-highlight-solid);
+  box-shadow: inset 0 -2px var(--deepcel-selection);
+  font-weight: 600;
+}
+
+body[data-dsh-deepcel] button.toolCell:hover {
+  background: var(--deepcel-green-soft);
+}
+
+body[data-dsh-deepcel] .formulaRow {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid #bcbcbc;
+  pointer-events: none;
+}
+
+body[data-dsh-deepcel] .nameCell,
+body[data-dsh-deepcel] .formulaLabel,
+body[data-dsh-deepcel] .formulaCell {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  border-right: 1px solid #cfcfcf;
+}
+
+body[data-dsh-deepcel] textarea[data-deepcel-formula-input]:focus {
+  outline: 2px solid var(--deepcel-selection) !important;
+  outline-offset: -2px !important;
+}
+
+body[data-dsh-deepcel][data-deepcel-model-probing] [role='menu'] {
+  visibility: hidden !important;
+}
+
+body[data-dsh-deepcel] .choiceOverlay {
+  position: fixed;
+  inset: var(--deepcel-ribbon-height) 0 28px var(--deepcel-sheet-origin);
+  z-index: 1000003;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: var(--deepcel-row-height) var(--deepcel-cell-width);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+body[data-dsh-deepcel] .choiceDialog {
+  display: grid;
+  grid-template-rows: 48px auto 48px;
+  width: min(540px, calc(100vw - var(--deepcel-sheet-origin) - 120px));
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-top: 2px solid var(--deepcel-selection) !important;
+  background: var(--deepcel-sheet) !important;
+  box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.18) !important;
+}
+
+body[data-dsh-deepcel] .choiceHeading {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--deepcel-grid-strong);
+  font-weight: 600;
+}
+
+body[data-dsh-deepcel] .choiceSelect {
+  min-height: 38px;
+  margin: 24px 60px;
+  padding: 0 10px;
+  border: 1px solid var(--deepcel-grid-strong);
+  background: var(--deepcel-sheet);
+  color: var(--deepcel-ink);
+}
+
+body[data-dsh-deepcel] .choiceActions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--deepcel-grid);
+}
+
+body[data-dsh-deepcel] .choiceButton {
+  appearance: none;
+  min-width: 72px;
+  border: 0;
+  border-left: 1px solid var(--deepcel-grid);
+  background: var(--deepcel-sheet);
+  color: var(--deepcel-ink);
+  cursor: pointer;
+}
+
+body[data-dsh-deepcel] .choiceButton:last-child {
+  background: var(--deepcel-green-soft);
+  color: var(--deepcel-green-dark);
+  font-weight: 600;
+}
+
+body[data-dsh-deepcel] .nameCell {
+  justify-content: center;
+  width: 72px;
+  color: #333;
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-dsh-deepcel] .formulaLabel {
+  justify-content: center;
+  width: 34px;
+  color: #666;
+  font: italic 13px/1 Georgia, serif;
+}
+
+body[data-dsh-deepcel] .formulaCell {
+  flex: 1;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  color: #222;
+  font-family: Consolas, monospace;
+  white-space: nowrap;
+}
+
+body[data-dsh-deepcel] .formulaTitle,
+body[data-dsh-deepcel] .formulaToken,
+body[data-dsh-deepcel] .formulaCell > button {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid var(--deepcel-grid);
+  background: transparent;
+  color: inherit;
+  font: 12px/1 Aptos, Calibri, 'Segoe UI', sans-serif;
+  white-space: nowrap;
+}
+
+body[data-dsh-deepcel] .formulaTitle {
+  min-width: 180px;
+  font-weight: 600;
+}
+
+body[data-dsh-deepcel] .formulaToken {
+  color: var(--deepcel-muted);
+}
+
+body[data-dsh-deepcel] .formulaCell > button {
+  min-width: 0;
+  cursor: pointer;
+}
+
+body[data-dsh-deepcel] .formulaCell > button:hover {
+  background: var(--deepcel-green-soft);
+}
+
+body[data-dsh-deepcel] .columnRow {
+  box-sizing: border-box;
+  padding-left: var(--deepcel-sidebar-offset);
+  overflow: hidden;
+  background: #f3f3f3;
+  border-bottom: 1px solid #a6a6a6;
+  transition: padding-left var(--ds-transition-duration-slow, 240ms) var(--ds-ease-in-out, ease-in-out);
+}
+
+/* Workbook ribbon buttons are the only shell entrypoints in this skin. The
+   native controls stay mounted as behavior owners and remain callable by the
+   proxy buttons, but do not occupy a second visible cell. */
+body[data-dsh-deepcel] [data-deepcel-native-proxy] {
+  display: none !important;
+}
+
+/* Workspace and preset remain mounted as the authoritative native selectors,
+   but the Deepcel skin exposes them through the Manage ribbon instead of a
+   separate hero row. */
+body[data-dsh-deepcel] [data-deepcel-hero-choice-source] {
+  display: none !important;
+}
+
+body[data-dsh-deepcel] .cornerCell,
+body[data-dsh-deepcel] .columnCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 19px;
+  border-right: 1px solid #c8c8c8;
+  color: #555;
+  font-size: 10px;
+}
+
+body[data-dsh-deepcel] .cornerCell {
+  flex: 0 0 var(--deepcel-row-gutter);
+  width: var(--deepcel-row-gutter);
+  background: linear-gradient(135deg, transparent 48%, #a6a6a6 49%, #a6a6a6 52%, transparent 53%);
+}
+
+body[data-dsh-deepcel] .columnCell {
+  flex: 0 0 var(--deepcel-cell-width);
+  width: var(--deepcel-cell-width);
+}
+
+body[data-dsh-deepcel] .statusChrome {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 1000000;
+  height: 28px;
+  color: #333;
+  background: #f3f3f3;
+  border-top: 1px solid #a6a6a6;
+  font: 11px/27px Aptos, Calibri, 'Segoe UI', sans-serif;
+  user-select: none;
+}
+
+body[data-dsh-deepcel] .sheetNavCell,
+body[data-dsh-deepcel] .sheetTabCell,
+body[data-dsh-deepcel] .newSheetCell,
+body[data-dsh-deepcel] .statusCell,
+body[data-dsh-deepcel] .zoomCell {
+  padding: 0 14px;
+  border-right: 1px solid #d2d2d2;
+  white-space: nowrap;
+}
+
+body[data-dsh-deepcel] .workbookTabs {
+  display: flex;
+  align-items: stretch;
+  max-width: min(46vw, 720px);
+  overflow: hidden;
+}
+
+body[data-dsh-deepcel] button.sheetNavCell {
+  position: relative;
+  appearance: none;
+  min-width: var(--deepcel-row-gutter);
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid #d2d2d2;
+  background: color-mix(in srgb, var(--deepcel-green-soft) 55%, var(--deepcel-header));
+  color: var(--deepcel-green-dark);
+  font: 700 14px/27px Aptos, Calibri, 'Segoe UI', sans-serif;
+  cursor: pointer;
+  box-shadow: inset 3px 0 var(--deepcel-selection);
+}
+
+body[data-dsh-deepcel] button.sheetNavCell::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  background: var(--deepcel-selection);
+  border-radius: 50% !important;
+}
+
+body[data-dsh-deepcel] .sheetTabCell {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 112px;
+  max-width: 220px;
+  padding: 0;
+  color: #444;
+  background: var(--deepcel-header);
+  border-bottom: 3px solid transparent;
+}
+
+body[data-dsh-deepcel] .sheetTabCell[data-active] {
+  color: #185c37;
+  background: #fff2a8;
+  border-bottom: 3px solid #217346;
+  font-weight: 600;
+}
+
+body[data-dsh-deepcel] button.workbookTabLabel,
+body[data-dsh-deepcel] button.workbookClose,
+body[data-dsh-deepcel] button.newSheetCell {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+body[data-dsh-deepcel] button.workbookTabLabel {
+  min-width: 0;
+  padding: 0 8px 0 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+body[data-dsh-deepcel] button.workbookClose {
+  width: 24px;
+  padding: 0;
+  opacity: 0;
+  font-size: 14px;
+}
+
+body[data-dsh-deepcel] .sheetTabCell:hover button.workbookClose,
+body[data-dsh-deepcel] .sheetTabCell:focus-within button.workbookClose {
+  opacity: 1;
+}
+
+body[data-dsh-deepcel] button.workbookClose:hover {
+  color: #fff;
+  background: #c42b1c;
+}
+
+body[data-dsh-deepcel] button.newSheetCell:hover {
+  background: var(--deepcel-green-soft);
+}
+
+body[data-dsh-deepcel] .statusSpacer {
+  flex: 1;
+}
+
+body[data-dsh-deepcel] .statisticsCell {
+  box-sizing: border-box;
+  max-width: min(62vw, 980px);
+  padding: 0 14px;
+  overflow: hidden;
+  border-left: 1px solid #d2d2d2;
+  border-right: 1px solid #d2d2d2;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body[data-dsh-deepcel] .statisticsCell[hidden] {
+  display: none;
+}
+
+body[data-dsh-deepcel] .zoomCell {
+  min-width: 92px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] .workbookChrome,
+body[data-dsh-deepcel][data-ds-dark-theme] .formulaRow,
+body[data-dsh-deepcel][data-ds-dark-theme] .toolRow {
+  color: #eee;
+  background: #252525;
+  border-color: #4a4a4a;
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] .ribbonTabs,
+body[data-dsh-deepcel][data-ds-dark-theme] .columnRow,
+body[data-dsh-deepcel][data-ds-dark-theme] .rowChrome,
+body[data-dsh-deepcel][data-ds-dark-theme] .statusChrome {
+  color: #ddd;
+  background: #2b2b2b;
+  border-color: #505050;
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] :is(.ribbonTab, .toolCell, .nameCell, .formulaLabel, .formulaCell, .columnCell) {
+  color: #ddd;
+  border-color: #4a4a4a;
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] .statisticsCell {
+  color: #c8c8c8;
+  border-color: #505050;
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] .ribbonTab[data-active],
+body[data-dsh-deepcel][data-ds-dark-theme] .sheetTabCell[data-active] {
+  color: #fff4b8;
+  background: #6f5d00;
+  border-color: #33c481;
+}
+
+/* The product frame is one worksheet. Pane edges are freeze-pane dividers;
+   every major surface uses the same cell border instead of cards/shadows. */
+body[data-dsh-deepcel] [id='root'] {
+  position: relative;
+  min-height: calc(100vh - var(--deepcel-ribbon-height) - 28px);
+  background: transparent;
+}
+
+body[data-dsh-deepcel] :global(#root) [class*='frame']:has(> [class*='sidebarCol']) {
+  background: transparent;
+}
+
+/* The transparent cell matrix paints over the blank canvas. Product data
+   surfaces rise one layer above it, so grid lines remain visible around data
+   without cutting through the merged composer, messages, or tool output. */
+body[data-dsh-deepcel] :is(
+  [class*='composerStack'],
+  [data-chat-flow-kind],
+  [class*='userRow'],
+  [data-terminal],
+  [data-variant='think'],
+  [data-question-key],
+  [data-testid='todo-panel']
+) {
+  position: relative;
+  z-index: 2;
+}
+
+body[data-dsh-deepcel] [data-pane] {
+  background-color: color-mix(in srgb, var(--deepcel-sheet) 94%, transparent);
+  border-color: var(--deepcel-grid) !important;
+  box-shadow: none !important;
+}
+
+body[data-dsh-deepcel] [data-pane='sidebar'] {
+  border-right: 3px solid var(--deepcel-grid-strong) !important;
+}
+
+body[data-dsh-deepcel] [data-pane='details'] {
+  border-left: 3px solid var(--deepcel-grid-strong) !important;
+}
+
+body[data-dsh-deepcel] [data-pane='conversation'] {
+  background: transparent;
+}
+
+/* Current shell surfaces do not expose pane tags. Keep the worksheet grid on
+   the stable conversation phase and scroll markers that own the visible
+   canvas, so opaque feature roots cannot cover the coordinates. */
+body[data-dsh-deepcel] [data-phase],
+body[data-dsh-deepcel] [data-conversation-scroll] {
+  background: transparent !important;
+}
+
+body[data-dsh-deepcel] [data-pane='conversation'] > div,
+body[data-dsh-deepcel] [data-pane='conversation'] [class*='scrollBody'] {
+  background: transparent !important;
+}
+
+body[data-dsh-deepcel] [data-pane='sidebar'] > div {
+  box-sizing: border-box;
+  padding-left: var(--deepcel-row-gutter);
+  background:
+    linear-gradient(to bottom, transparent 23px, var(--deepcel-grid) 24px),
+    color-mix(in srgb, var(--deepcel-header) 94%, transparent);
+  background-size: 100% 24px;
+}
+
+body[data-dsh-deepcel] [class*='sidebarCol'] > div {
+  box-sizing: border-box;
+  padding-left: 0;
+}
+
+/* The native sidebar remains the business owner, but the Deepcel shell turns
+   it into a left drawer. A closed native rail contributes no worksheet UI;
+   opening restores its real width and moves the coordinate origin. */
+body[data-dsh-deepcel] [class*='sidebarCol'] {
+  z-index: 2;
+  overflow: hidden;
+  border-right: 1px solid var(--deepcel-grid-strong);
+}
+
+body[data-dsh-deepcel] [data-sidebar-collapsed] [class*='sidebarCol'] {
+  visibility: hidden;
+  pointer-events: none;
+  border-right: 0;
+}
+
+body[data-dsh-deepcel] [data-sidebar-collapsed] [class*='sidebarCol'] :is([class*='_overlay'], [class*='_root']):has(> [role='dialog']) {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+body[data-dsh-deepcel] [data-sidebar-collapsed] [class*='centerCol'] {
+  width: calc(100% + 56px);
+  margin-left: -56px;
+}
+
+body[data-dsh-deepcel] [data-pane='sidebar'] > div > :first-child,
+body[data-dsh-deepcel] [data-pane='conversation'] header {
+  background: var(--deepcel-header);
+  border-bottom: 2px solid var(--deepcel-grid-strong);
+  box-shadow: none;
+}
+
+/* The ribbon and formula bar project the registered conversation chrome.
+   Its source remains mounted as the behavior owner but no longer occupies a
+   second row inside the worksheet. */
+body[data-dsh-deepcel] [data-deepcel-header-source] {
+  display: none !important;
+}
+
+body[data-dsh-deepcel] [data-pane='sidebar'] > div > button {
+  border: 2px solid var(--deepcel-selection);
+  background: var(--deepcel-sheet);
+  color: var(--deepcel-ink);
+  box-shadow: inset 0 0 0 1px var(--deepcel-sheet);
+  font-weight: 600;
+}
+
+body[data-dsh-deepcel] [data-pane='sidebar'] > div > button:hover {
+  background: var(--deepcel-green-soft);
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] [data-pane='sidebar'] > div > button:hover {
+  background: #293b31;
+}
+
+body[data-dsh-deepcel] [role='tree'],
+body[data-dsh-deepcel] [role='treeitem'] {
+  border-color: var(--deepcel-grid);
+}
+
+body[data-dsh-deepcel] [role='treeitem'] {
+  min-height: var(--deepcel-row-height);
+  border-bottom: 1px solid var(--deepcel-grid);
+  background: color-mix(in srgb, var(--deepcel-sheet) 96%, transparent);
+}
+
+body[data-dsh-deepcel] [role='treeitem']:hover {
+  background: color-mix(in srgb, var(--deepcel-highlight-solid) 58%, var(--deepcel-sheet));
+}
+
+/* Workspace grouping derives `folderActive` only for the expanded group that
+   contains the current session. Project that native fact as an Office-blue
+   bookmark without giving the group the session row's yellow selection. */
+body[data-dsh-deepcel] [role='treeitem'][aria-expanded]:has([class*='folderActive']) {
+  position: relative;
+  box-shadow: inset 3px 0 var(--deepcel-bookmark);
+}
+
+body[data-dsh-deepcel] [role='treeitem'][aria-expanded]:has([class*='folderActive'])::after {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 10px;
+  width: 11px;
+  height: 18px;
+  background: var(--deepcel-bookmark);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%);
+  pointer-events: none;
+}
+
+/* Grouped sidebar rows follow Deepcel's outline hierarchy: the Workspace stays
+   on level one, while its mounted Session rows move one partial cell inward.
+   HoverCard may wrap either row in a span, so the host selector handles both
+   wrapped and direct treeitems without depending on generated class hashes. */
+body[data-dsh-deepcel] [class*='groupSection'] {
+  position: relative;
+}
+
+body[data-dsh-deepcel] [class*='groupSection']:has(
+  > :is([role='treeitem']:not([aria-expanded]), :has(> [role='treeitem']:not([aria-expanded])))
+)::before {
+  content: '';
+  position: absolute;
+  top: 55px;
+  bottom: 17px;
+  left: 9px;
+  z-index: 1;
+  border-left: 1px solid color-mix(in srgb, var(--deepcel-bookmark) 48%, var(--deepcel-grid));
+  pointer-events: none;
+}
+
+body[data-dsh-deepcel] [class*='groupSection'] > :is(
+  [role='treeitem']:not([aria-expanded]),
+  :has(> [role='treeitem']:not([aria-expanded]))
+) {
+  box-sizing: border-box;
+  width: calc(100% - 20px);
+  margin-left: 20px;
+}
+
+body[data-dsh-deepcel] [class*='groupSection'] > [role='treeitem']:not([aria-expanded])::before,
+body[data-dsh-deepcel] [class*='groupSection'] > :has(> [role='treeitem']:not([aria-expanded])) > [role='treeitem']::before {
+  content: '├ ROW';
+  margin-left: -16px;
+  color: color-mix(in srgb, var(--deepcel-bookmark) 72%, var(--deepcel-muted));
+}
+
+body[data-dsh-deepcel] [class*='groupSection'] > [role='treeitem']:not([aria-expanded]):last-child::before,
+body[data-dsh-deepcel] [class*='groupSection'] > :has(> [role='treeitem']:not([aria-expanded])):last-child > [role='treeitem']::before {
+  content: '└ ROW';
+}
+
+body[data-dsh-deepcel] :is([aria-selected='true'], [aria-current='true'], [data-state='active'], [data-state='checked']) {
+  background: var(--deepcel-highlight-solid) !important;
+  color: var(--deepcel-ink) !important;
+  box-shadow: inset 3px 0 var(--deepcel-selection), inset 0 -1px var(--deepcel-selection) !important;
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] :is([aria-selected='true'], [aria-current='true'], [data-state='active'], [data-state='checked']) {
+  color: #fff8cf !important;
+}
+
+/* Search and compact controls are ordinary cells. Large composer and
+   take-over inputs are merged ranges with a green selection boundary. */
+body[data-dsh-deepcel] :is(input, textarea, [contenteditable='true']) {
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  background: var(--deepcel-sheet) !important;
+  color: var(--deepcel-ink) !important;
+  box-shadow: none !important;
+}
+
+body[data-dsh-deepcel] :is(input, textarea, [contenteditable='true']):focus {
+  border: 2px solid var(--deepcel-selection) !important;
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px var(--deepcel-sheet) !important;
+}
+
+body[data-dsh-deepcel] [data-composer-card],
+body[data-dsh-deepcel] [data-question-key] > section,
+body[data-dsh-deepcel] [data-testid='todo-panel'] {
+  position: relative;
+  border: 2px solid var(--deepcel-selection) !important;
+  background:
+    linear-gradient(to right, transparent 59px, color-mix(in srgb, var(--deepcel-grid) 55%, transparent) 60px),
+    linear-gradient(to bottom, transparent 23px, color-mix(in srgb, var(--deepcel-grid) 55%, transparent) 24px),
+    var(--deepcel-sheet) !important;
+  background-size: var(--deepcel-cell-width) var(--deepcel-row-height) !important;
+  box-shadow: inset 0 0 0 1px var(--deepcel-sheet), 0 0 0 1px var(--deepcel-selection) !important;
+}
+
+body[data-dsh-deepcel] [data-composer-card]::before {
+  content: none;
+}
+
+body[data-dsh-deepcel] [data-composer-card]::after,
+body[data-dsh-deepcel] [aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  box-sizing: border-box;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--deepcel-sheet);
+  background: var(--deepcel-selection);
+  pointer-events: none;
+}
+
+body[data-dsh-deepcel] [data-composer-card] :is(textarea, [contenteditable='true']) {
+  border-color: transparent !important;
+  background: color-mix(in srgb, var(--deepcel-sheet) 90%, transparent) !important;
+}
+
+/* Hero composer geometry follows the worksheet coordinates exactly. The
+   stack begins ten rows below the column header; its heading, workbook
+   selector, merged input range, and command row each occupy whole cells. */
+body[data-dsh-deepcel] [data-phase='hero'] [data-conversation-scroll] {
+  justify-content: flex-start !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-seat] {
+  position: relative;
+  flex: 0 0 240px !important;
+  width: 100%;
+  height: 240px;
+  margin-top: 288px;
+}
+
+/* The active scrollport is the worksheet content grid. Mainline view wrappers
+   become transparent layout carriers, while messages and the composer occupy
+   the same twelve columns and 24px implicit rows in DOM order. */
+body[data-dsh-deepcel] [data-phase='active'] [data-conversation-scroll][data-deepcel-workbook-flow] {
+  display: grid !important;
+  grid-template-columns:
+    calc(var(--deepcel-row-gutter) + var(--deepcel-chat-x, 0px))
+    repeat(12, var(--deepcel-cell-width))
+    minmax(0, 1fr);
+  grid-auto-rows: var(--deepcel-row-height);
+  align-content: start;
+  padding: var(--deepcel-flow-padding-top, 0px) 0 calc(2 * var(--deepcel-row-height)) !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-deepcel-flow-container],
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-deepcel-cellized],
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-deepcel-cell-container] {
+  display: contents !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-deepcel-composer-range] {
+  position: relative !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 2 !important;
+  grid-column: 2 / span 12;
+  grid-row: span var(--deepcel-composer-rows, 4);
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  align-self: stretch;
+  background: transparent !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [class*='composerStack'] {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  gap: 0 !important;
+}
+
+/* The chat list occupies one stable twelve-column range. Message shells only
+   reserve whole worksheet rows; semantic Markdown blocks paint the actual
+   merged cells, so prose is no longer a free-form layer over the grid. */
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-chat-flow] {
+  background: transparent !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [class*='toBottomSlot'] {
+  position: absolute !important;
+  right: var(--deepcel-cell-width);
+  bottom: var(--deepcel-row-height);
+}
+
+body[data-dsh-deepcel] [data-deepcel-message-range] {
+  box-sizing: border-box;
+  grid-column: 2 / span 12;
+  grid-row: span var(--deepcel-message-rows, 1);
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--deepcel-message-height, 72px);
+}
+
+body[data-dsh-deepcel] [data-deepcel-message-range][data-deepcel-single-line]:not([data-deepcel-cellized]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+body[data-dsh-deepcel] [data-deepcel-message-range][data-deepcel-single-line]:not([data-deepcel-cellized]) * {
+  margin-block: 0 !important;
+  line-height: var(--deepcel-row-height) !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-cell-container] {
+  box-sizing: border-box;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+body[data-dsh-deepcel] :is(ul, ol)[data-deepcel-cell-container] {
+  list-style-position: inside;
+}
+
+body[data-dsh-deepcel] [data-deepcel-content-cell] {
+  position: relative;
+  z-index: 2;
+  display: block;
+  box-sizing: border-box;
+  grid-column: 2 / span 12;
+  grid-row: span var(--deepcel-content-cell-rows, 1);
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 0 6px !important;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-bottom-width: 0 !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-sheet) !important;
+  line-height: var(--deepcel-row-height) !important;
+  overflow: hidden;
+}
+
+body[data-dsh-deepcel] [data-deepcel-content-cell]:last-child {
+  border-bottom-width: 1px !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-content-cell][data-deepcel-single-line] {
+  text-align: center;
+}
+
+body[data-dsh-deepcel] li[data-deepcel-content-cell] {
+  display: list-item;
+  list-style-position: inside;
+  padding-left: 18px !important;
+}
+
+body[data-dsh-deepcel] :is([class~='md-code-block'], [class*='tableScroll'])[data-deepcel-content-cell] {
+  overflow: auto;
+}
+
+body[data-dsh-deepcel] img[data-deepcel-content-cell] {
+  object-fit: contain;
+}
+
+/* Bash and Pwsh share the native BashRow/TerminalBlock layout. Once their
+   card wrappers become display:contents, every visible sibling needs its own
+   merged-cell row; otherwise the summary auto-flows into the far-right blank
+   columns while only the terminal body remains in the conversation range. */
+body[data-dsh-deepcel] [data-sample='bash'][data-variant='bash'][data-deepcel-content-cell] {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: var(--deepcel-row-height);
+  padding: 0 6px !important;
+  overflow: hidden;
+}
+
+body[data-dsh-deepcel] [data-sample='bash'][data-variant='bash'] + * > [data-deepcel-content-cell] {
+  grid-column: 2 / span 12;
+}
+
+body[data-dsh-deepcel] [data-sample='bash'][data-variant='bash'] + * > [data-terminal][data-deepcel-content-cell] {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+}
+
+body[data-dsh-deepcel] [data-sample='bash'][data-variant='bash'] + * > button[data-deepcel-content-cell] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: var(--deepcel-row-height);
+  padding: 0 8px !important;
+  overflow: visible;
+  border-radius: 0 !important;
+  opacity: 1;
+}
+
+/* A completed turn contributes two worksheet records after the assistant
+   prose: produced files, then message actions. The native turn-tail wrapper
+   becomes display:contents, so both children need explicit merged-cell
+   placement or the produced-files root auto-flows into the prose row. */
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-deepcel-content-cell]:has(> [data-produced-files-row]) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px !important;
+  row-gap: 0 !important;
+  min-height: var(--deepcel-row-height);
+  padding: 0 6px !important;
+  overflow: hidden;
+}
+
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-produced-files-row] {
+  min-width: 0;
+  height: var(--deepcel-row-height);
+  line-height: var(--deepcel-row-height);
+}
+
+/* IconActions are textual worksheet commands in this skin. Their native
+   28px icon seats must grow to their aria-labels, and the tooltip needs to
+   escape the merged cell instead of being paint-clipped to an empty sliver. */
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'][data-deepcel-message-range] {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+}
+
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-time-hover-root] > [class*='actions'][data-deepcel-content-cell] {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: var(--deepcel-row-height);
+  padding: 0 !important;
+  overflow: visible;
+}
+
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-time-hover-root] > [class*='actions'] > button[aria-label] {
+  width: auto;
+  min-width: max-content;
+  height: var(--deepcel-row-height);
+  padding: 0 8px;
+  border-right: 1px solid var(--deepcel-grid) !important;
+  border-radius: 0;
+}
+
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-time-hover-root] [role='tooltip'] {
+  z-index: 1000003;
+  width: max-content;
+  max-width: min(420px, 50vw);
+  padding: 3px 7px;
+  overflow: visible;
+  background: #252525 !important;
+  color: #fff !important;
+  white-space: pre-line;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] {
+  display: grid !important;
+  grid-template-rows: minmax(calc(3 * var(--deepcel-row-height)), 1fr) var(--deepcel-row-height);
+  box-sizing: border-box;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  background: var(--deepcel-sheet) !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-deepcel-composer-range] :has(> [data-composer-card]) {
+  align-items: stretch !important;
+  box-sizing: border-box;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] > [data-input-scroll] {
+  grid-row: 1;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0 !important;
+  border-bottom: 1px solid var(--deepcel-grid-strong);
+  background: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [data-input-backdrop],
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] textarea,
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [data-input-mirror] {
+  padding: 0 6px !important;
+  font-size: 14px;
+  line-height: var(--deepcel-row-height);
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] > [class*='row'] {
+  grid-row: 2;
+  display: flex;
+  align-items: stretch;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--deepcel-row-height);
+  min-height: var(--deepcel-row-height);
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] :is([class*='tools'], [class*='modes'], [class*='trailing']) {
+  align-items: stretch;
+  height: var(--deepcel-row-height);
+  gap: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [class*='tools'] {
+  flex: 1 1 auto;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [class*='trailing'] {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] :is(button, select, [role='button']):not([role='menuitem']) {
+  box-sizing: border-box;
+  min-width: var(--deepcel-cell-width);
+  height: var(--deepcel-row-height);
+  min-height: var(--deepcel-row-height);
+  margin: 0 !important;
+  padding: 0 6px !important;
+  border: 0 !important;
+  border-right: 1px solid var(--deepcel-grid) !important;
+  background: var(--deepcel-sheet) !important;
+  color: var(--deepcel-ink) !important;
+  font: 11px/var(--deepcel-row-height) Aptos, Calibri, 'Segoe UI', sans-serif;
+  transform: none !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [class*='modes'] :is(button, select, [role='button']) {
+  width: calc(2 * var(--deepcel-cell-width));
+  max-width: calc(2 * var(--deepcel-cell-width));
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [class*='trailing'] :is(button, select, [role='button']) {
+  width: calc(2 * var(--deepcel-cell-width));
+  max-width: calc(2 * var(--deepcel-cell-width));
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [class*='trailing'] > button:last-child {
+  width: var(--deepcel-cell-width);
+  min-width: var(--deepcel-cell-width);
+  color: #fff !important;
+  background: var(--deepcel-green) !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] > [class*='row'] button[aria-label]:has(svg)::after {
+  content: none !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] button[aria-haspopup]::after {
+  content: none !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] button[aria-haspopup='dialog'] {
+  width: var(--deepcel-cell-width);
+  min-width: var(--deepcel-cell-width);
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] button[aria-haspopup='dialog']::after {
+  content: 'Context' !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [class*='add']::after {
+  content: 'Add' !important;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] [class*='trailing'] > button:last-child::after {
+  content: 'Run' !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-stats-source] {
+  display: none !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='composerStack'] {
+  position: absolute !important;
+  top: 0;
+  left: calc(var(--deepcel-row-gutter) + var(--deepcel-composer-x, 0px));
+  transform: none;
+  box-sizing: border-box;
+  width: 540px !important;
+  height: 240px !important;
+  max-width: none !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='headline']:has(> [class*='headlineText']) {
+  position: absolute;
+  top: 0;
+  left: 60px;
+  z-index: 3;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 60px 300px 60px;
+  align-items: center;
+  width: 420px;
+  height: 24px;
+  column-gap: 0;
+  border-top: 1px solid var(--deepcel-grid-strong);
+  border-right: 1px solid var(--deepcel-grid-strong);
+  border-bottom: 1px solid var(--deepcel-grid-strong);
+  border-left: 1px solid var(--deepcel-grid-strong);
+  background: var(--deepcel-sheet);
+  font-size: 20px;
+  line-height: 23px;
+  font-weight: 400;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='headline']:has(> [class*='headlineText'])::before {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--deepcel-grid);
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='headlineText'] {
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--deepcel-sheet);
+  color: var(--deepcel-ink);
+  cursor: text;
+  text-align: center;
+  text-overflow: ellipsis;
+  user-select: text;
+  white-space: nowrap;
+}
+
+/* The title lives inside HeroShell rather than the worksheet overlay's
+   stacking context. Paint its active range on the real merged-cell element so
+   the green boundary cannot be hidden by an intermediate Hero wrapper. */
+body[data-dsh-deepcel] [data-phase='hero'] :is(
+  [class*='headlineText'],
+  [class*='previewBadge']
+)[data-deepcel-selected-range] {
+  z-index: 4;
+  outline: 2px solid var(--deepcel-selection);
+  outline-offset: -2px;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] :is(
+  [class*='headlineText'],
+  [class*='previewBadge']
+)[data-deepcel-selected-range]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--deepcel-sheet);
+  background: var(--deepcel-selection);
+  pointer-events: none;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='headline'][data-deepcel-selected-range='formula']::before {
+  position: relative;
+  z-index: 4;
+  outline: 2px solid var(--deepcel-selection);
+  outline-offset: -2px;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='previewBadge'] {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border-left: 1px solid var(--deepcel-grid);
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  background: var(--deepcel-sheet);
+  font-size: 12px;
+  line-height: 23px;
+}
+
+/* A trajectory record's content column is one horizontally merged worksheet
+   range. Its opaque cell fill hides the decorative vertical grid lines under
+   continuous text while the native table keeps row selection and semantics. */
+body[data-dsh-deepcel] tr[data-trajectory-row-key] > td:last-child {
+  position: relative;
+  z-index: 1;
+  background: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key]:hover > td:last-child {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key][data-selected='true'] > td:last-child {
+  background: var(--deepcel-highlight-solid);
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='heroWorkspaceRow'] {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  box-sizing: border-box;
+  width: 540px !important;
+  height: 24px;
+  padding: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='heroWorkspaceRow'] > button {
+  box-sizing: border-box;
+  width: 60px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 5px !important;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  background: var(--deepcel-sheet) !important;
+  font-size: 11px;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='heroWorkspaceRow'] > button::after {
+  content: none !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] :has(> [data-composer-card]) {
+  position: absolute;
+  top: 72px;
+  left: 0;
+  box-sizing: border-box;
+  width: 540px !important;
+  height: 168px !important;
+  padding: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] {
+  display: grid !important;
+  grid-template-rows: 144px 24px;
+  box-sizing: border-box;
+  width: 540px !important;
+  height: 168px !important;
+  min-height: 168px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] > [class*='scroll'] {
+  grid-row: 1;
+  min-height: 0;
+  padding: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='grow'] {
+  height: 100%;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] textarea {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100% !important;
+  padding: 0 5px !important;
+  font-size: 12px;
+  line-height: 24px;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] > [class*='row'] {
+  position: absolute;
+  left: -2px;
+  bottom: -2px;
+  grid-row: 2;
+  align-items: stretch;
+  box-sizing: border-box;
+  width: 540px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 !important;
+  border-top: 1px solid var(--deepcel-grid-strong);
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] :is([class*='tools'], [class*='trailing']) {
+  align-items: stretch;
+  height: 23px;
+  gap: 0;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='trailing'] {
+  margin-left: auto;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] :is(button, [role='button']):not([role='menuitem']) {
+  box-sizing: border-box;
+  min-width: 60px;
+  width: auto;
+  height: 23px;
+  min-height: 23px;
+  padding: 0 5px !important;
+  border: 0 !important;
+  border-right: 1px solid var(--deepcel-grid) !important;
+  background: color-mix(in srgb, var(--deepcel-sheet) 94%, transparent) !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='trailing'] > button:last-child {
+  color: #fff !important;
+  background: var(--deepcel-green) !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='add']::after {
+  content: 'Add' !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='modes'] button:not([role='menuitem']) > span,
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='trailing'] button[aria-haspopup='menu']:not([role='menuitem']) > span {
+  display: none !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='modes'] button:not([role='menuitem'])::after {
+  content: 'Access' !important;
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='trailing'] button[aria-haspopup='menu']:not([role='menuitem'])::after {
+  content: 'Model' !important;
+}
+
+body[data-dsh-deepcel] [data-composer-card] [role='menu'] [role='menuitem'] > span {
+  display: inline-flex !important;
+}
+
+body[data-dsh-deepcel] [data-composer-card] [role='menu'] [role='menuitem']::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Messages and tool surfaces become worksheet records, never floating cards. */
+body[data-dsh-deepcel] :is([class*='bubble'], [data-terminal], [data-variant='think']) {
+  border: 1px solid var(--deepcel-grid) !important;
+  background: color-mix(in srgb, var(--deepcel-sheet) 94%, transparent) !important;
+  box-shadow: none !important;
+}
+
+body[data-dsh-deepcel] [class*='userRow'] [class*='bubble'] {
+  position: relative;
+  box-sizing: border-box;
+  width: min(420px, 100%);
+  max-width: 100%;
+  padding: 29px 12px 8px !important;
+  border: 1px solid color-mix(in srgb, var(--deepcel-comment-accent) 52%, var(--deepcel-grid-strong)) !important;
+  border-left: 4px solid var(--deepcel-comment-accent) !important;
+  background: var(--deepcel-comment-fill) !important;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--deepcel-grid-strong) 44%, transparent) !important;
+}
+
+body[data-dsh-deepcel] [class*='userRow'] [class*='bubble']::before {
+  content: 'COMMENT';
+  position: absolute;
+  inset: 0 0 auto;
+  box-sizing: border-box;
+  height: var(--deepcel-row-height);
+  padding: 0 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--deepcel-comment-accent) 35%, var(--deepcel-grid));
+  background: var(--deepcel-comment-header);
+  color: var(--deepcel-comment-accent);
+  font: 600 9px/var(--deepcel-row-height) Consolas, monospace;
+  letter-spacing: 0.08em;
+}
+
+body[data-dsh-deepcel] [class*='userRow'] [class*='bubble']::after {
+  content: '';
+  position: absolute;
+  top: 22px;
+  right: -11px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid var(--deepcel-comment-accent);
+  background: linear-gradient(45deg, transparent 48%, var(--deepcel-comment-fill) 49%);
+  transform: skewY(-35deg);
+}
+
+body[data-dsh-deepcel] :is([data-state='running'], [data-status='running']) {
+  background-image: linear-gradient(transparent 42%, var(--deepcel-highlight) 42%, var(--deepcel-highlight) 86%, transparent 86%) !important;
+}
+
+body[data-dsh-deepcel] :is(pre, code, [data-terminal]) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Portaled menus resemble Deepcel filter dropdowns: square plates, a green
+   header rule, checkbox-like rows, and a textual FILTER label. */
+body[data-dsh-deepcel] :is([role='menu'], [role='listbox'], [data-radix-popper-content-wrapper] > *, [role='dialog']) {
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-top: 4px solid var(--deepcel-green) !important;
+  background: var(--deepcel-sheet) !important;
+  color: var(--deepcel-ink) !important;
+  box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Settings, workspace creation, and other modal editors become temporary
+   worksheet ranges. Their product modules still own state, validation, and
+   submission; the shell only relocates the existing surface below the ribbon. */
+body[data-dsh-deepcel] :is([class*='_overlay'], [class*='_root']):has(> [role='dialog']) {
+  position: fixed !important;
+  inset: var(--deepcel-ribbon-height) 0 28px var(--deepcel-sheet-origin) !important;
+  z-index: 999998 !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  box-sizing: border-box;
+  padding: var(--deepcel-row-height) var(--deepcel-cell-width) !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
+
+body[data-dsh-deepcel] :is([class*='_overlay'], [class*='_root']):has(> [role='dialog']) > [class*='_mask'] {
+  display: none !important;
+}
+
+body[data-dsh-deepcel] [role='dialog'] {
+  margin: 0 !important;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-top: 2px solid var(--deepcel-selection) !important;
+  background: var(--deepcel-sheet) !important;
+  box-shadow: none !important;
+}
+
+body[data-dsh-deepcel] [class*='_panel'][role='dialog'] {
+  width: min(720px, calc(100vw - var(--deepcel-sheet-origin) - 120px)) !important;
+  height: min(672px, calc(100vh - var(--deepcel-ribbon-height) - 76px)) !important;
+  max-width: none !important;
+}
+
+body[data-dsh-deepcel] [class*='_panel'][role='dialog'] [class*='_nav'] {
+  width: 180px !important;
+  padding: 24px 0 0 !important;
+  border-right: 1px solid var(--deepcel-grid-strong);
+}
+
+body[data-dsh-deepcel] [class*='_panel'][role='dialog'] [class*='_navCell'] {
+  height: 48px !important;
+  padding: 0 10px !important;
+  border-bottom: 1px solid var(--deepcel-grid) !important;
+}
+
+body[data-dsh-deepcel] [class*='_panel'][role='dialog'] [class*='_header'] {
+  height: 48px !important;
+  padding: 12px 10px !important;
+  border-bottom: 1px solid var(--deepcel-grid-strong);
+}
+
+body[data-dsh-deepcel] [class*='_dialog'][role='dialog'] {
+  width: min(540px, calc(100vw - var(--deepcel-sheet-origin) - 120px)) !important;
+  max-height: calc(100vh - var(--deepcel-ribbon-height) - 76px) !important;
+  padding-bottom: 24px !important;
+  gap: 0 !important;
+}
+
+body[data-dsh-deepcel] [class*='_dialog'][role='dialog'] [class*='_header'] {
+  box-sizing: border-box;
+  height: 48px;
+  padding: 12px 10px !important;
+  border-bottom: 1px solid var(--deepcel-grid-strong);
+}
+
+body[data-dsh-deepcel] [class*='_dialog'][role='dialog'] [class*='_body'] {
+  margin-top: 0 !important;
+  padding: 24px 60px 0 !important;
+}
+
+body[data-dsh-deepcel] :is([role='menu'], [role='listbox'])::before {
+  content: 'FILTER  |  Select values';
+  display: block;
+  box-sizing: border-box;
+  min-height: 25px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--deepcel-grid);
+  background: var(--deepcel-header);
+  color: var(--deepcel-muted);
+  font: 10px/1.2 Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+body[data-dsh-deepcel] :is([role='menuitem'], [role='option'], [role='menuitemradio'], [role='menuitemcheckbox']) {
+  min-height: 25px;
+  border-bottom: 1px solid var(--deepcel-grid) !important;
+}
+
+body[data-dsh-deepcel] :is([role='menuitem'], [role='option'], [role='menuitemradio'], [role='menuitemcheckbox']):hover {
+  background: var(--deepcel-highlight-solid) !important;
+  color: var(--deepcel-ink) !important;
+}
+
+body[data-dsh-deepcel] :is(select, button[aria-haspopup='menu'], button[aria-haspopup='listbox']) {
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  background: var(--deepcel-header) !important;
+  color: var(--deepcel-ink) !important;
+}
+
+body[data-dsh-deepcel] :is(select, button[aria-haspopup='menu'], button[aria-haspopup='listbox'])::after {
+  content: ' Filter v';
+  padding-left: 5px;
+  color: var(--deepcel-green-dark);
+  font-size: 10px;
+}
+
+/* Icons collapse into worksheet vocabulary. Items that already carry visible
+   text simply lose the ornamental SVG and retain their native copy. */
+body[data-dsh-deepcel] svg {
+  display: none !important;
+}
+
+/* The Settings close control has no aria-label: its accessible label is a
+   visually-hidden child. Keep its canonical X glyph instead of letting the
+   skin's global icon-to-text rule turn the still-clickable button blank. */
+body[data-dsh-deepcel] [class*='_panel'][role='dialog'] [class*='_header'] button:has(> svg):has(> span) > svg {
+  display: block !important;
+  width: 14px !important;
+  height: 14px !important;
+  color: var(--deepcel-ink) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+body[data-dsh-deepcel] [role='treeitem']::before {
+  content: 'ROW';
+  flex: none;
+  margin-right: 7px;
+  color: var(--deepcel-muted);
+  font: 9px/1 Consolas, monospace;
+}
+
+body[data-dsh-deepcel] [role='treeitem'][aria-expanded]::before {
+  content: 'BOOK';
+  color: var(--deepcel-green-dark);
+}
+
+body[data-dsh-deepcel] [data-phase='hero'] [class*='headline']:has(> [class*='headlineText'])::before {
+  content: 'FORMULA  ';
+  color: var(--deepcel-green-dark);
+  font: 9px/1 Consolas, monospace;
+  letter-spacing: 0.06em;
+  vertical-align: middle;
+}
+
+body[data-dsh-deepcel] button[aria-label]:has(> svg)::after,
+body[data-dsh-deepcel] button[aria-label]:has(> span > svg)::after {
+  content: attr(aria-label);
+  display: inline-block;
+  max-width: 92px;
+  overflow: hidden;
+  color: inherit;
+  font: 10px/1.2 Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body[data-dsh-deepcel] [data-composer-card] [class*='trailing'] > button:last-child::after {
+  content: 'Run' !important;
+  color: inherit;
+  font: 10px/1 Consolas, monospace;
+}
+
+body[data-dsh-deepcel] :is(button, [role='button']):focus-visible {
+  outline: 2px solid var(--deepcel-selection) !important;
+  outline-offset: -1px !important;
+}
+
+body[data-dsh-deepcel] [class*='titlebar'] {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  body[data-dsh-deepcel] {
+    min-width: 0;
+  }
+
+  body[data-dsh-deepcel] .toolCell:nth-last-child(-n + 3),
+  body[data-dsh-deepcel] .columnCell:nth-last-child(-n + 4),
+  body[data-dsh-deepcel] .statusCell {
+    display: none;
+  }
+
+  body[data-dsh-deepcel] .ribbonTab {
+    padding-inline: 10px;
+  }
+}
+
+/* Final formula-input authority: these selectors intentionally follow the
+   legacy composer cell rules while the Deepcel interaction shell is active. */
+body[data-dsh-deepcel] :global(#root) [data-deepcel-composer-range] {
+  min-height: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: visible !important;
+}
+
+/* The fixed textarea cannot escape a low-z sticky composer seat on its own.
+   Raise the exact native owner above workbook chrome while leaving its empty
+   layout box transparent to pointer hit testing. */
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-deepcel-formula-owner] {
+  position: relative !important;
+  z-index: 1000002 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] {
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  z-index: 1000002 !important;
+  display: block !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] * {
+  visibility: hidden !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] textarea[data-deepcel-formula-input] {
+  position: fixed !important;
+  inset: 89px 0 auto 106px !important;
+  z-index: 1000002 !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  height: var(--deepcel-formula-height) !important;
+  min-height: var(--deepcel-formula-height) !important;
+  max-height: var(--deepcel-formula-height) !important;
+  margin: 0 !important;
+  padding: 5px 10px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  visibility: visible !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--deepcel-grid-strong) !important;
+  background: var(--deepcel-sheet) !important;
+  color: var(--deepcel-ink) !important;
+  -webkit-text-fill-color: var(--deepcel-ink) !important;
+  caret-color: var(--deepcel-selection) !important;
+  font: 12px/18px Consolas, monospace !important;
+  resize: none !important;
+  pointer-events: auto !important;
+  cursor: text !important;
+  opacity: 1 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-dsh-deepcel] *,
+  body[data-dsh-deepcel] *::before,
+  body[data-dsh-deepcel] *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

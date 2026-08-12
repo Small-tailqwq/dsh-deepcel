@@ -2,6 +2,14 @@
 
 DeepSeek Harness Web GUI 的 Deepcel 工作簿皮肤独立分发仓库。
 
+## 效果预览
+
+点击图片可查看完整尺寸。
+
+| 亮色模式 | 暗色模式 |
+|---|---|
+| [![Deepcel 亮色模式](deepcel/preview/light.webp)](deepcel/preview/light.webp) | [![Deepcel 暗色模式](deepcel/preview/dark.webp)](deepcel/preview/dark.webp) |
+
 ## 皮肤
 
 | 皮肤 | 包名 | 说明 | 许可 |

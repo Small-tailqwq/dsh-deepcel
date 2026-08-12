@@ -20,8 +20,8 @@
     "bundleWired": false
   },
   "preview": {
-    "light": "preview/light.png",
-    "dark": "preview/dark.png"
+    "light": "preview/light.webp",
+    "dark": "preview/dark.webp"
   },
   "order": 6
 }

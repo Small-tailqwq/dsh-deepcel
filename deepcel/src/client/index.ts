@@ -4,7 +4,7 @@
  * every write. The application remains the interactive layer beneath the
  * decorative row, column, ribbon, formula, sheet-tab, and status cells.
  */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import css from './deepcel.module.css'
 
 const SKIN_TITLE = 'Workbook Grid · DeepSeek Harness'

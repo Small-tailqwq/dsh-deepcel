@@ -15,50 +15,50 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var deepcel_module_css_default = {
-			"accountCell": "wwO2oG_accountCell",
-			"choiceActions": "wwO2oG_choiceActions",
-			"choiceButton": "wwO2oG_choiceButton",
-			"choiceDialog": "wwO2oG_choiceDialog",
-			"choiceHeading": "wwO2oG_choiceHeading",
-			"choiceOverlay": "wwO2oG_choiceOverlay",
-			"choiceSelect": "wwO2oG_choiceSelect",
-			"columnCell": "wwO2oG_columnCell",
-			"columnRow": "wwO2oG_columnRow",
-			"cornerCell": "wwO2oG_cornerCell",
-			"formulaCell": "wwO2oG_formulaCell",
-			"formulaLabel": "wwO2oG_formulaLabel",
-			"formulaRow": "wwO2oG_formulaRow",
-			"formulaTitle": "wwO2oG_formulaTitle",
-			"formulaToken": "wwO2oG_formulaToken",
-			"headerControls": "wwO2oG_headerControls",
-			"nameCell": "wwO2oG_nameCell",
-			"newSheetCell": "wwO2oG_newSheetCell",
-			"quickCell": "wwO2oG_quickCell",
-			"ribbonTab": "wwO2oG_ribbonTab",
-			"ribbonTabs": "wwO2oG_ribbonTabs",
-			"rowCell": "wwO2oG_rowCell",
-			"rowChrome": "wwO2oG_rowChrome",
-			"sheetNavCell": "wwO2oG_sheetNavCell",
-			"sheetTabCell": "wwO2oG_sheetTabCell",
-			"statisticsCell": "wwO2oG_statisticsCell",
-			"statusCell": "wwO2oG_statusCell",
-			"statusChrome": "wwO2oG_statusChrome",
-			"statusSpacer": "wwO2oG_statusSpacer",
-			"titleCell": "wwO2oG_titleCell",
-			"titleRow": "wwO2oG_titleRow",
-			"toolCell": "wwO2oG_toolCell",
-			"toolRow": "wwO2oG_toolRow",
-			"topMode": "wwO2oG_topMode",
-			"topTitle": "wwO2oG_topTitle",
-			"topToken": "wwO2oG_topToken",
-			"workbookChrome": "wwO2oG_workbookChrome",
-			"workbookClose": "wwO2oG_workbookClose",
 			"workbookTabLabel": "wwO2oG_workbookTabLabel",
-			"workbookTabs": "wwO2oG_workbookTabs",
-			"worksheetCell": "wwO2oG_worksheetCell",
-			"worksheetGrid": "wwO2oG_worksheetGrid",
+			"topToken": "wwO2oG_topToken",
+			"toolRow": "wwO2oG_toolRow",
+			"newSheetCell": "wwO2oG_newSheetCell",
+			"workbookChrome": "wwO2oG_workbookChrome",
+			"toolCell": "wwO2oG_toolCell",
 			"worksheetSelection": "wwO2oG_worksheetSelection",
-			"zoomCell": "wwO2oG_zoomCell"
+			"statusChrome": "wwO2oG_statusChrome",
+			"worksheetCell": "wwO2oG_worksheetCell",
+			"topTitle": "wwO2oG_topTitle",
+			"accountCell": "wwO2oG_accountCell",
+			"choiceButton": "wwO2oG_choiceButton",
+			"zoomCell": "wwO2oG_zoomCell",
+			"statusSpacer": "wwO2oG_statusSpacer",
+			"formulaLabel": "wwO2oG_formulaLabel",
+			"choiceActions": "wwO2oG_choiceActions",
+			"workbookTabs": "wwO2oG_workbookTabs",
+			"topMode": "wwO2oG_topMode",
+			"rowChrome": "wwO2oG_rowChrome",
+			"choiceHeading": "wwO2oG_choiceHeading",
+			"statusCell": "wwO2oG_statusCell",
+			"cornerCell": "wwO2oG_cornerCell",
+			"choiceDialog": "wwO2oG_choiceDialog",
+			"columnCell": "wwO2oG_columnCell",
+			"worksheetGrid": "wwO2oG_worksheetGrid",
+			"formulaCell": "wwO2oG_formulaCell",
+			"choiceSelect": "wwO2oG_choiceSelect",
+			"rowCell": "wwO2oG_rowCell",
+			"nameCell": "wwO2oG_nameCell",
+			"columnRow": "wwO2oG_columnRow",
+			"ribbonTab": "wwO2oG_ribbonTab",
+			"formulaRow": "wwO2oG_formulaRow",
+			"sheetNavCell": "wwO2oG_sheetNavCell",
+			"ribbonTabs": "wwO2oG_ribbonTabs",
+			"sheetTabCell": "wwO2oG_sheetTabCell",
+			"titleCell": "wwO2oG_titleCell",
+			"headerControls": "wwO2oG_headerControls",
+			"formulaTitle": "wwO2oG_formulaTitle",
+			"choiceOverlay": "wwO2oG_choiceOverlay",
+			"formulaToken": "wwO2oG_formulaToken",
+			"workbookClose": "wwO2oG_workbookClose",
+			"quickCell": "wwO2oG_quickCell",
+			"statisticsCell": "wwO2oG_statisticsCell",
+			"titleRow": "wwO2oG_titleRow"
 		};
 		//#endregion
 		//#region src/client/index.ts
@@ -295,7 +295,7 @@ window.__ModuleLoader__.load({
 			trigger.click();
 			await afterPaint();
 			const menu = controlledHeroChoiceMenu(trigger);
-			const excluded = /* @__PURE__ */ new Set(["Add workspace", "添加工作区"]);
+			const excluded = new Set(["Add workspace", "添加工作区"]);
 			const choices = [...menu?.querySelectorAll("[role='menuitem'], [role='menuitemradio']") ?? []].filter((button) => !button.disabled).map(menuChoiceLabel).filter((label) => label !== "" && !excluded.has(label));
 			trigger.click();
 			await afterPaint();
@@ -516,7 +516,7 @@ window.__ModuleLoader__.load({
 				const shellSummary = message.querySelector("[data-sample='bash'][data-variant='bash']");
 				const shellBody = shellSummary?.nextElementSibling;
 				const shellBodyCells = shellBody === null || shellBody === void 0 ? [] : [...shellBody.children].filter((child) => child instanceof HTMLElement);
-				const candidates = [.../* @__PURE__ */ new Set([
+				const candidates = [...new Set([
 					...producedFilesRoot === void 0 ? [] : [producedFilesRoot],
 					...shellSummary === null ? [] : [shellSummary, ...shellBodyCells],
 					...message.querySelectorAll(CONTENT_CELL_SELECTOR)
@@ -574,10 +574,8 @@ window.__ModuleLoader__.load({
 			const syncFlowLayout = () => {
 				const nextContainers = /* @__PURE__ */ new Set();
 				const flow = scrollport?.querySelector("[data-chat-flow]") ?? null;
-				if (scrollport !== null) {
-					if (flow === null) delete scrollport.dataset.deepcelWorkbookFlow;
-					else scrollport.dataset.deepcelWorkbookFlow = "";
-				}
+				if (scrollport !== null) if (flow === null) delete scrollport.dataset.deepcelWorkbookFlow;
+				else scrollport.dataset.deepcelWorkbookFlow = "";
 				let container = flow;
 				while (container !== null && container !== scrollport) {
 					nextContainers.add(container);

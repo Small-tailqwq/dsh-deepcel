@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /** Deepcel skin apply/dispose contract and workbook chrome tests. */
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context, type Fiber } from 'cordis'
+import { Context, type Fiber } from '@deepseek-ai/cordis'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { apply } from '../src/client/index.ts'

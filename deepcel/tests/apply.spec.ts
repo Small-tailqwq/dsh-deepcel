@@ -263,6 +263,11 @@ describe('Deepcel skin apply', () => {
     )
     expect(stylesheet).toContain("content: '├ ROW';")
     expect(stylesheet).toContain("content: '└ ROW';")
+    expect(stylesheet).toContain("[class*='searchButton'][aria-expanded]::after")
+    expect(stylesheet).toMatch(/\[class\*='searchButton'\]\[aria-expanded\]::after \{[\s\S]*?content: 'Find';/)
+    expect(stylesheet).toMatch(/\[class\*='search'\]\s*> input\[class\*='searchInput'\] \{[\s\S]*?border: 0 !important;/)
+    expect(stylesheet).toMatch(/\[class\*='search'\]\[class\*='searchExpanded'\] \{[\s\S]*?border: 1px solid var\(--deepcel-grid-strong\) !important;/)
+    expect(stylesheet).toContain("input:not([class*='searchInput'])")
     expect(stylesheet).toMatch(/\[class\*='headlineText'\] \{[\s\S]*?background: var\(--deepcel-sheet\);[\s\S]*?user-select: text;/)
     expect(stylesheet).toMatch(
       /\[class\*='headline'\]:has\(> \[class\*='headlineText'\]\) \{[\s\S]*?height: 24px;[\s\S]*?line-height: 23px;/,

@@ -1018,14 +1018,14 @@ body[data-dsh-deepcel][data-ds-dark-theme] :is([aria-selected='true'], [aria-cur
 
 /* Search and compact controls are ordinary cells. Large composer and
    take-over inputs are merged ranges with a green selection boundary. */
-body[data-dsh-deepcel] :is(input, textarea, [contenteditable='true']) {
+body[data-dsh-deepcel] :is(input:not([class*='searchInput']), textarea, [contenteditable='true']) {
   border: 1px solid var(--deepcel-grid-strong) !important;
   background: var(--deepcel-sheet) !important;
   color: var(--deepcel-ink) !important;
   box-shadow: none !important;
 }
 
-body[data-dsh-deepcel] :is(input, textarea, [contenteditable='true']):focus {
+body[data-dsh-deepcel] :is(input:not([class*='searchInput']), textarea, [contenteditable='true']):focus {
   border: 2px solid var(--deepcel-selection) !important;
   outline: none !important;
   box-shadow: inset 0 0 0 1px var(--deepcel-sheet) !important;
@@ -1921,6 +1921,40 @@ body[data-dsh-deepcel] button[aria-label]:has(> span > svg)::after {
   font: 10px/1.2 Consolas, monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Mainline keeps wide-sidebar search collapsed inside the section heading and
+   expands the same node in place. Preserve the compact text-cell abstraction
+   without letting the full accessible label or an invisible input consume the
+   28px collapsed slot. */
+body[data-dsh-deepcel]
+  :is([data-pane='sidebar'], [class*='sidebarCol'])
+  [class*='searchButton'][aria-expanded]
+  > svg {
+  display: none !important;
+}
+
+body[data-dsh-deepcel]
+  :is([data-pane='sidebar'], [class*='sidebarCol'])
+  [class*='searchButton'][aria-expanded]::after {
+  content: 'Find';
+  max-width: none;
+}
+
+body[data-dsh-deepcel]
+  :is([data-pane='sidebar'], [class*='sidebarCol'])
+  [class*='search']
+  > input[class*='searchInput'] {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body[data-dsh-deepcel]
+  :is([data-pane='sidebar'], [class*='sidebarCol'])
+  [class*='search'][class*='searchExpanded'] {
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  background: var(--deepcel-sheet) !important;
 }
 
 body[data-dsh-deepcel] [data-composer-card] [class*='trailing'] > button:last-child::after {

@@ -1044,6 +1044,217 @@ body[data-dsh-deepcel] [data-testid='todo-panel'] {
   box-shadow: inset 0 0 0 1px var(--deepcel-sheet), 0 0 0 1px var(--deepcel-selection) !important;
 }
 
+/* QuestionComposer replaces the normal composer inside the same seat. The
+   formula-bar owner deliberately ignores pointer hits so its zero-height
+   layout carrier cannot cover the worksheet, therefore the takeover must
+   opt back into hit testing for its native buttons and answer fields. */
+body[data-dsh-deepcel] [data-deepcel-formula-owner] [data-question-key],
+body[data-dsh-deepcel] [data-deepcel-formula-owner] [data-testid='todo-panel'],
+body[data-dsh-deepcel] [data-question-key] :is(button, input, textarea) {
+  pointer-events: auto !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] [class*='badge'] {
+  border: 1px solid var(--deepcel-green-dark) !important;
+  background: var(--deepcel-green) !important;
+  color: #fff !important;
+}
+
+/* Ask-user is worksheet data, not a floating card. Its header, options,
+   custom answer, and actions each consume visible rows of one merged range. */
+body[data-dsh-deepcel] [data-question-key] {
+  width: min(calc(12 * var(--deepcel-cell-width)), calc(100vw - var(--deepcel-row-gutter) - 24px));
+  padding: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] > section {
+  max-width: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--deepcel-ink) !important;
+  font-family: Aptos, Calibri, 'Segoe UI', sans-serif;
+}
+
+body[data-dsh-deepcel] [data-question-key] > section > :is(header, footer) {
+  min-height: calc(2 * var(--deepcel-row-height));
+  margin: 0 !important;
+  padding: 0 8px !important;
+  border-bottom: 1px solid var(--deepcel-grid-strong);
+  border-radius: 0 !important;
+  background: color-mix(in srgb, var(--deepcel-header) 88%, transparent) !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] [data-question-scroll] {
+  background: var(--deepcel-sheet) !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] [class*='detail'] {
+  min-height: var(--deepcel-row-height);
+  margin: 0 !important;
+  padding: 3px 8px !important;
+  border-bottom: 1px solid var(--deepcel-grid);
+}
+
+body[data-dsh-deepcel] [data-question-key] [class*='options'] {
+  gap: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] button:is([role='radio'], [role='checkbox']) {
+  min-height: var(--deepcel-row-height) !important;
+  padding: 0 8px !important;
+  gap: 8px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--deepcel-grid) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-sheet) !important;
+  color: var(--deepcel-ink) !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] button:is([role='radio'], [role='checkbox']):hover,
+body[data-dsh-deepcel] [data-question-key] button:is([role='radio'], [role='checkbox'])[aria-checked='true'] {
+  background: var(--deepcel-highlight-solid) !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] button:is([role='radio'], [role='checkbox'])[aria-checked='true'] {
+  box-shadow: inset 3px 0 var(--deepcel-selection) !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] :is([class*='number'], [class*='checkbox']) {
+  position: relative;
+  display: grid !important;
+  flex: 0 0 16px !important;
+  place-items: center;
+  width: 16px !important;
+  height: 16px !important;
+  margin: 4px 0 !important;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-sheet) !important;
+  color: transparent !important;
+  font-size: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] [class*='checkbox']::before {
+  content: none !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] button[aria-checked='true'] :is([class*='number'], [class*='checkbox']) {
+  border-color: var(--deepcel-selection) !important;
+  background: var(--deepcel-selection) !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] button[aria-checked='true'] :is([class*='number'], [class*='checkbox'])::after {
+  content: '✓';
+  color: #fff;
+  font: 700 12px/14px Aptos, Calibri, sans-serif;
+}
+
+body[data-dsh-deepcel] [data-question-key] :is([class*='optionLabel'], [class*='description']) {
+  line-height: var(--deepcel-row-height) !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] [class*='customRow'] {
+  min-height: calc(2 * var(--deepcel-row-height)) !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  gap: 8px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--deepcel-grid-strong) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-sheet) !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] [class*='customRow']:focus-within {
+  box-shadow: inset 3px 0 var(--deepcel-selection) !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] :is([class*='customInput'], [class*='customTextarea']) {
+  min-height: calc(2 * var(--deepcel-row-height)) !important;
+  margin: 0 !important;
+  padding: 3px 8px !important;
+  border: 0 !important;
+  border-left: 1px solid var(--deepcel-grid) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-sheet) !important;
+  color: var(--deepcel-ink) !important;
+  -webkit-text-fill-color: var(--deepcel-ink) !important;
+  font: 12px/18px Aptos, Calibri, 'Segoe UI', sans-serif !important;
+}
+
+body[data-dsh-deepcel] [data-question-key] :is([class*='customInput'], [class*='customTextarea']):focus {
+  outline: 2px solid var(--deepcel-selection) !important;
+  outline-offset: -2px !important;
+  box-shadow: none !important;
+}
+
+/* todo_write projects its current list above the composer. Keep the fold
+   control clickable inside the same pointer-transparent seat and render one
+   status checkbox plus one merged text cell per task row. */
+body[data-dsh-deepcel] [data-testid='todo-panel'] {
+  width: min(calc(12 * var(--deepcel-cell-width)), calc(100vw - var(--deepcel-row-gutter) - 24px));
+  margin: 0 auto !important;
+  border-radius: 0 !important;
+  overflow: hidden;
+}
+
+body[data-dsh-deepcel] [data-testid='todo-panel'] > [class*='body'] {
+  gap: 0 !important;
+  padding: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-testid='todo-panel'] button[aria-expanded] {
+  min-height: var(--deepcel-row-height);
+  padding: 0 8px !important;
+  border-bottom: 1px solid var(--deepcel-grid-strong) !important;
+  background: var(--deepcel-header) !important;
+  color: var(--deepcel-ink) !important;
+  pointer-events: auto !important;
+}
+
+body[data-dsh-deepcel] [data-testid='todo-panel'] ul {
+  gap: 0 !important;
+  max-height: calc(8 * var(--deepcel-row-height)) !important;
+}
+
+body[data-dsh-deepcel] [data-testid='todo-panel'] li[data-status] {
+  min-height: var(--deepcel-row-height);
+  gap: 8px !important;
+  padding: 0 8px !important;
+  border-bottom: 1px solid var(--deepcel-grid);
+  background: var(--deepcel-sheet);
+  color: var(--deepcel-ink) !important;
+}
+
+body[data-dsh-deepcel] [data-testid='todo-panel'] li[data-status] > [class*='glyph'] {
+  position: relative;
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid var(--deepcel-grid-strong);
+  background: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel] [data-testid='todo-panel'] li[data-status='completed'] > [class*='glyph'] {
+  border-color: var(--deepcel-selection);
+  background: var(--deepcel-selection);
+}
+
+body[data-dsh-deepcel] [data-testid='todo-panel'] li[data-status='completed'] > [class*='glyph']::after {
+  content: '✓';
+  color: #fff;
+  font: 700 12px/14px Aptos, Calibri, sans-serif;
+}
+
+body[data-dsh-deepcel] [data-testid='todo-panel'] li[data-status='in_progress'] > [class*='glyph']::after {
+  content: '•';
+  color: var(--deepcel-selection);
+  font: 700 18px/12px Aptos, Calibri, sans-serif;
+}
+
 body[data-dsh-deepcel] [data-composer-card]::before {
   content: none;
 }
@@ -1970,6 +2181,152 @@ body[data-dsh-deepcel] :is(button, [role='button']):focus-visible {
 
 body[data-dsh-deepcel] [class*='titlebar'] {
   display: none !important;
+}
+
+/* Better Sidebar portals its right workbench, terminal workbench, and toggle
+   cluster directly onto body. Keep those surfaces inside the worksheet
+   viewport so the workbook ribbon and status bar remain independently
+   interactive. The structural selectors avoid depending on its CSS-module
+   hash while still excluding ordinary product panels. */
+body[data-dsh-deepcel]
+  div[class*='toggleCluster']:has(> button[class*='toggleButton']) {
+  top: calc(var(--deepcel-ribbon-height) + 4px) !important;
+  right: 0 !important;
+  gap: 0 !important;
+  height: var(--deepcel-row-height);
+  border-left: 1px solid var(--deepcel-grid-strong);
+  border-bottom: 1px solid var(--deepcel-grid-strong);
+  background: var(--deepcel-header);
+}
+
+body[data-dsh-deepcel]
+  div[class*='toggleCluster']:has(> button[class*='toggleButton'])
+  > button[class*='toggleButton'] {
+  width: var(--deepcel-cell-width) !important;
+  height: var(--deepcel-row-height) !important;
+  padding: 0 6px !important;
+  border: 0 !important;
+  border-right: 1px solid var(--deepcel-grid-strong) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-header) !important;
+  color: var(--deepcel-ink) !important;
+  font: 10px/var(--deepcel-row-height) Aptos, Calibri, 'Segoe UI', sans-serif !important;
+}
+
+body[data-dsh-deepcel]
+  div[class*='toggleCluster']:has(> button[class*='toggleButton'])
+  > button[class*='toggleButton']:first-of-type::after {
+  content: '底栏' !important;
+  max-width: none !important;
+}
+
+body[data-dsh-deepcel]
+  div[class*='toggleCluster']:has(> button[class*='toggleButton'])
+  > button[class*='toggleButton']:last-of-type::after {
+  content: '右栏' !important;
+  max-width: none !important;
+}
+
+body[data-dsh-deepcel]
+  div[class*='toggleCluster']:has(> button[class*='toggleButton'])
+  > button[class*='toggleButton']:hover {
+  background: var(--deepcel-highlight-solid) !important;
+}
+
+body[data-dsh-deepcel]
+  div[class*='panel']:has(> [class*='panelResize'] + [class*='panelBody']) {
+  top: calc(var(--deepcel-ribbon-height) + 1px) !important;
+  bottom: 28px !important;
+}
+
+body[data-dsh-deepcel]
+  div[class*='bottomPanel']:has(> [class*='bottomResize']) {
+  left: var(--deepcel-sheet-origin) !important;
+  bottom: 28px !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Better Sidebar's 18–28px icon seats cannot carry Deepcel's global full
+   aria-label projection. Use spreadsheet-sized textual controls instead of
+   clipped fragments such as “关…” and “新…”. */
+body[data-dsh-deepcel] div[class*='panel'] button[class*='tabClose']::after,
+body[data-dsh-deepcel] div[class*='bottomPanel'] button[class*='tabClose']::after {
+  content: '×' !important;
+  max-width: none !important;
+  font: 12px/1 Consolas, monospace !important;
+}
+
+body[data-dsh-deepcel] div[class*='panel'] button[class*='tabBarPlus']::after,
+body[data-dsh-deepcel] div[class*='bottomPanel'] button[class*='tabBarPlus']::after {
+  content: '+' !important;
+  max-width: none !important;
+  font: 12px/1 Consolas, monospace !important;
+}
+
+body[data-dsh-deepcel] div[class*='bottomPanel'] button[class*='bottomClose'] {
+  top: 5px !important;
+  right: 4px !important;
+  width: 40px !important;
+  height: var(--deepcel-row-height) !important;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-header) !important;
+}
+
+body[data-dsh-deepcel] div[class*='bottomPanel'] button[class*='bottomClose']::after {
+  content: '关闭' !important;
+  max-width: none !important;
+  font: 10px/1 Aptos, Calibri, 'Segoe UI', sans-serif !important;
+}
+
+/* Tooltip content is portaled outside both workbenches. Give it an explicit
+   opaque worksheet-independent plate so grid lines and high-z chrome cannot
+   leave a blank hover rectangle. */
+body[data-dsh-deepcel] [role='tooltip'] {
+  z-index: 1000004 !important;
+  box-sizing: border-box;
+  width: max-content !important;
+  max-width: min(360px, calc(100vw - 16px)) !important;
+  min-height: 24px;
+  padding: 4px 8px !important;
+  overflow: visible !important;
+  border: 1px solid #111 !important;
+  border-radius: 0 !important;
+  background: #252525 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  font: 11px/15px Aptos, Calibri, 'Segoe UI', sans-serif !important;
+  white-space: normal !important;
+}
+
+/* The row-number gutter sits above the worksheet canvas. Starting the bottom
+   workbench at --deepcel-sheet-origin keeps it out from under that gutter;
+   the remaining declarations make xterm refit the full visible cell range. */
+body[data-dsh-deepcel]
+  div[class*='bottomPanel']:has(> [class*='bottomResize'])
+  [class*='terminalWrap'] {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  background: var(--deepcel-sheet) !important;
+}
+
+body[data-dsh-deepcel]
+  div[class*='bottomPanel']:has(> [class*='bottomResize'])
+  [class*='terminal'] {
+  box-sizing: border-box;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 8px 10px !important;
+  overflow: hidden !important;
+}
+
+body[data-dsh-deepcel]
+  div[class*='bottomPanel']:has(> [class*='bottomResize'])
+  [class*='terminal'] :global(.xterm) {
+  width: 100% !important;
+  height: 100% !important;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 900px) {

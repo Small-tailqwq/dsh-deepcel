@@ -1,6 +1,6 @@
 {
   "name": "@dsh-external/dsh-client-ui-skin-deepcel",
-  "description": "Hot-pluggable spreadsheet-workbook skin for the DeepSeek Harness Web GUI",
+  "description": "一款模仿 excel 的 dsh 皮肤",
   "version": "0.0.1",
   "private": true,
   "type": "module",

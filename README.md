@@ -1,6 +1,6 @@
 # dsh-deepcel
 
-DeepSeek Harness Web GUI 的 Deepcel 工作簿皮肤独立分发仓库。
+一款模仿 excel 的 dsh 皮肤。
 
 ## 效果预览
 

@@ -4,7 +4,7 @@
   "nameEn": "Deepcel Workbook",
   "author": "Small-tailqwq",
   "tagline": "单元格界面 · 合并输入区 · 工作簿功能区",
-  "description": "把 DeepSeek Harness WebUI 重解释为一张可工作的电子表格：窗格、消息、工具和设置成为可交互单元格，大输入区成为合并区域，工作簿标签承载多会话导航。",
+  "description": "一款模仿 excel 的 dsh 皮肤",
   "tags": [
     "deepcel",
     "spreadsheet",

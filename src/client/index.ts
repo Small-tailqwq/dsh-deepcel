@@ -432,7 +432,7 @@ function rangeName(range: CellRange): string {
   return start === end ? start : `${start}:${end}`
 }
 
-function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
+function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement): WorksheetSurface {
   const grid = document.createElement('div')
   grid.className = cls('worksheetGrid')
   grid.dataset.skinGrid = ''
@@ -476,8 +476,6 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
   }
 
   const updateRows = (): void => {
-    const rows = document.querySelector<HTMLDivElement>('[data-skin-chrome="rows"]')
-    if (rows === null) return
     const count = Math.ceil((window.innerHeight - currentRibbonHeight() - STATUS_HEIGHT) / ROW_HEIGHT) + 3
     if (rows.children.length !== count) {
       fillRowCoordinates(rows, rowOffset)
@@ -533,7 +531,7 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
   const syncMessageCells = (message: HTMLElement): void => {
     clearMessageCells(message)
     if (message.hasAttribute('hidden')) return
-    if (message.querySelector('[data-disclosure-row]') !== null) return
+    if (message.matches("[data-chat-flow-kind='system-prompt'], [data-chat-flow-kind='context']")) return
     if (message.querySelector("[class*='userRow']") !== null) return
 
     const producedFilesRoot = message.querySelector<HTMLElement>('[data-produced-files-row]')?.parentElement
@@ -600,6 +598,16 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
       }
     }
     dirtyMessages.clear()
+    if (scrollport !== null) {
+      const origin = scrollport.getBoundingClientRect().top - scrollport.scrollTop
+      const ranges = scrollport.querySelectorAll<HTMLElement>(
+        '[data-deepcel-message-range]:not([data-deepcel-cellized]):not([hidden]), [data-deepcel-content-cell], [data-deepcel-composer-range]',
+      )
+      const bottom = Math.max(scrollport.clientHeight, ...[...ranges]
+        .filter(element => element.closest('[hidden]') === null)
+        .map(element => element.getBoundingClientRect().bottom - origin + 2 * ROW_HEIGHT))
+      scrollport.style.setProperty('--deepcel-flow-height', `${bottom}px`)
+    }
   }
 
   const sizeComposer = (): void => {
@@ -636,6 +644,9 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
     syncTrajectoryRows()
     const nextContainers = new Set<HTMLElement>()
     const flow = scrollport?.querySelector<HTMLElement>('[data-chat-flow]') ?? null
+    const surfaceOwner = flow === null || scrollport === null ? document.body : scrollport
+    if (rows.parentElement !== surfaceOwner) surfaceOwner.append(rows)
+    if (selection.parentElement !== surfaceOwner) surfaceOwner.append(selection)
     if (scrollport !== null) {
       if (flow === null) delete scrollport.dataset.deepcelWorkbookFlow
       else {
@@ -700,6 +711,7 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
     document.body.style.setProperty('--deepcel-scroll-y', `${-residual}px`)
     document.body.style.setProperty('--deepcel-row-offset', String(nextOffset))
     document.body.style.setProperty('--deepcel-row-offset-y', `${-nextOffset * ROW_HEIGHT}px`)
+    scrollport.style.setProperty('--deepcel-row-start', `${nextOffset * ROW_HEIGHT}px`)
     if (nextOffset !== rowOffset) {
       rowOffset = nextOffset
       updateRows()
@@ -722,6 +734,9 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
     scrollport?.style.removeProperty('--deepcel-flow-padding-top')
     scrollport?.style.removeProperty('--deepcel-chat-columns')
     scrollport?.style.removeProperty('--deepcel-chat-x')
+    scrollport?.style.removeProperty('--deepcel-row-start')
+    scrollport?.style.removeProperty('--deepcel-flow-height')
+    if (scrollport !== null) delete scrollport.dataset.deepcelWorkbookFlow
     scrollport = next
     rowOffset = 0
     document.body.style.setProperty('--deepcel-scroll-y', '0px')
@@ -894,6 +909,8 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
       scrollport?.style.removeProperty('--deepcel-flow-padding-top')
       scrollport?.style.removeProperty('--deepcel-chat-columns')
       scrollport?.style.removeProperty('--deepcel-chat-x')
+      scrollport?.style.removeProperty('--deepcel-row-start')
+      scrollport?.style.removeProperty('--deepcel-flow-height')
       if (scrollport !== null) delete scrollport.dataset.deepcelWorkbookFlow
       document.body.style.removeProperty('--deepcel-composer-x')
       document.body.style.removeProperty('--deepcel-chat-x')
@@ -1127,8 +1144,8 @@ export function apply(ctx: Context): void {
   body.setAttribute('data-dsh-deepcel', '')
 
   const { chrome: workbook, columns, controls, nameCell } = createWorkbookChrome()
-  const worksheet = createWorksheetSurface(nameCell)
   const rows = createRowChrome()
+  const worksheet = createWorksheetSurface(nameCell, rows)
   const {
     footer: status,
     sidebar: sidebarControl,

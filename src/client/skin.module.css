@@ -1314,6 +1314,7 @@ body[data-dsh-deepcel] [data-phase='hero'] [data-composer-seat] {
    become transparent layout carriers, while messages and the composer occupy
    the same twelve columns and 24px implicit rows in DOM order. */
 body[data-dsh-deepcel] [data-phase='active'] [data-conversation-scroll][data-deepcel-workbook-flow] {
+  position: relative;
   display: grid !important;
   grid-template-columns:
     calc(var(--deepcel-row-gutter) + var(--deepcel-chat-x, 0px))
@@ -1322,6 +1323,35 @@ body[data-dsh-deepcel] [data-phase='active'] [data-conversation-scroll][data-dee
   grid-auto-rows: var(--deepcel-row-height);
   align-content: start;
   padding: var(--deepcel-flow-padding-top, 0px) 0 calc(2 * var(--deepcel-row-height)) !important;
+  background-color: var(--deepcel-sheet) !important;
+  background-image:
+    linear-gradient(to right, var(--deepcel-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--deepcel-grid) 1px, transparent 1px) !important;
+  background-size: var(--deepcel-cell-width) var(--deepcel-row-height) !important;
+  background-position: var(--deepcel-row-gutter) var(--deepcel-flow-padding-top, 0px) !important;
+  background-attachment: local !important;
+}
+
+/* Native scrolling carries the grid, row labels and selection together. The
+   gutter only recycles labels at whole-row boundaries. */
+body[data-dsh-deepcel]:has([data-deepcel-workbook-flow]) > .worksheetGrid {
+  display: none;
+}
+
+body[data-dsh-deepcel] [data-deepcel-workbook-flow] > .rowChrome {
+  position: absolute;
+  inset: calc(var(--deepcel-flow-padding-top, 0px) + var(--deepcel-row-start, 0px) - var(--deepcel-row-height)) auto auto 0;
+  height: auto;
+  max-height: max(0px, calc(var(--deepcel-flow-height, 100vh) - var(--deepcel-row-start, 0px) + var(--deepcel-row-height)));
+  overflow: hidden;
+  transform: none;
+  transition: none;
+}
+
+body[data-dsh-deepcel] [data-deepcel-workbook-flow] > .worksheetSelection {
+  position: absolute;
+  top: calc(var(--deepcel-flow-padding-top, 0px) + var(--deepcel-selection-y, 0px));
+  left: calc(var(--deepcel-row-gutter) + var(--deepcel-selection-x, 0px));
 }
 
 body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-deepcel-flow-container],
@@ -1388,6 +1418,13 @@ body[data-dsh-deepcel] [data-deepcel-message-range][hidden='until-found'] {
   height: 0;
   content-visibility: hidden;
   contain-intrinsic-size: 0;
+}
+
+body[data-dsh-deepcel] [data-deepcel-cell-container] > [data-turn-process-inline][hidden] {
+  position: absolute;
+  height: 0;
+  margin: 0;
+  content-visibility: hidden;
 }
 
 body[data-dsh-deepcel] [data-chat-flow-kind]:is([data-chat-flow-kind='system-prompt'], [data-chat-flow-kind='context'], [data-chat-flow-kind='turn-process']):not([hidden]) {
@@ -1614,7 +1651,7 @@ body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-
   margin-left: auto;
 }
 
-body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] :is(button, select, [role='button']):not([role='menuitem']) {
+body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-composer-card] :is(button, select, [role='button']):not([role='menuitem']):not([data-slot='conversation.input.attachments'] *) {
   box-sizing: border-box;
   min-width: var(--deepcel-cell-width);
   height: var(--deepcel-row-height);
@@ -1989,7 +2026,7 @@ body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] [class*='trailin
   margin-left: auto;
 }
 
-body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] :is(button, [role='button']):not([role='menuitem']) {
+body[data-dsh-deepcel] [data-phase='hero'] [data-composer-card] :is(button, [role='button']):not([role='menuitem']):not([data-slot='conversation.input.attachments'] *) {
   box-sizing: border-box;
   min-width: 60px;
   width: auto;
@@ -2039,7 +2076,7 @@ body[data-dsh-deepcel] :is([class*='bubble'], [data-terminal], [data-variant='th
   box-shadow: none !important;
 }
 
-body[data-dsh-deepcel] [class*='userRow'] [class*='bubble'] {
+body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble'] {
   position: relative;
   box-sizing: border-box;
   width: min(420px, 100%);
@@ -2051,7 +2088,7 @@ body[data-dsh-deepcel] [class*='userRow'] [class*='bubble'] {
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--deepcel-grid-strong) 44%, transparent) !important;
 }
 
-body[data-dsh-deepcel] [class*='userRow'] [class*='bubble']::before {
+body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble']::before {
   content: 'COMMENT';
   position: absolute;
   inset: 0 0 auto;
@@ -2065,7 +2102,7 @@ body[data-dsh-deepcel] [class*='userRow'] [class*='bubble']::before {
   letter-spacing: 0.08em;
 }
 
-body[data-dsh-deepcel] [class*='userRow'] [class*='bubble']::after {
+body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble']::after {
   content: '';
   position: absolute;
   top: 22px;
@@ -2120,6 +2157,34 @@ body[data-dsh-deepcel] [role='dialog'] {
   border-top: 2px solid var(--deepcel-selection) !important;
   background: var(--deepcel-sheet) !important;
   box-shadow: none !important;
+}
+
+/* ImageLightbox owns its image and close action; its full-screen seat is
+   transparent so the worksheet remains visible around the floating image. */
+body[data-dsh-deepcel] [role='dialog']:has(> img) {
+  z-index: 1000005;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body[data-dsh-deepcel] [role='dialog']:has(> img) > [aria-hidden='true'] {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+body[data-dsh-deepcel] [role='dialog'] > img {
+  border: 1px solid var(--deepcel-grid-strong);
+  border-radius: 0;
+  box-shadow: 0 8px 32px #0003;
+}
+
+body[data-dsh-deepcel] [role='dialog']:has(> img) > button svg {
+  display: block !important;
+}
+
+body[data-dsh-deepcel] [role='dialog']:has(> img) > button::after {
+  content: none !important;
 }
 
 body[data-dsh-deepcel] [class*='_panel'][role='dialog']:not(:has(> [data-turn-usage-details], > [data-turn-time-details])) {
@@ -2421,9 +2486,7 @@ body[data-dsh-deepcel] div[class*='bottomPanel'] button[class*='bottomClose']::a
   font: 10px/1 Aptos, Calibri, 'Segoe UI', sans-serif !important;
 }
 
-/* Tooltip content is portaled outside both workbenches. Give it an explicit
-   opaque worksheet-independent plate so grid lines and high-z chrome cannot
-   leave a blank hover rectangle. */
+/* Native tooltip bubbles keep fixed positioning even inside user messages. */
 body[data-dsh-deepcel] [role='tooltip'] {
   z-index: 1000004 !important;
   box-sizing: border-box;
@@ -2689,6 +2752,41 @@ body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversat
 
 body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] button {
   border-radius: 0;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] [class*='_item'] {
+  flex: 0 0 96px;
+  width: 96px;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] button[class*='_thumbnail'] {
+  width: 96px;
+  height: 64px;
+  border: 1px solid var(--deepcel-grid-strong);
+  background: var(--deepcel-header);
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] button[class*='_thumbnail'] img {
+  object-fit: contain;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] button[class*='_remove'] {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  opacity: 1;
+  border: 1px solid var(--deepcel-grid-strong);
+  background: var(--deepcel-sheet);
+  color: var(--deepcel-ink);
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] button svg {
+  display: block !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] button::after {
+  content: none !important;
 }
 
 /* RC1 docks are worksheet records above the transcript footer. Their native

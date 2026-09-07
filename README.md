@@ -28,10 +28,10 @@
 
 ```powershell
 dsh plugin --profile web add 'github:Small-tailqwq/dsh-deep-whale#path:/skin-manager'
-dsh plugin --profile web add 'github:Small-tailqwq/dsh-deepcel#path:/deepcel'
+dsh plugin --profile web add 'github:Small-tailqwq/dsh-deepcel'
 ```
 
-`#path:` 是子目录语法；PowerShell 中 `#` 是注释起始，spec 必须用单引号包裹（将 `web` 替换为你的 profile 名称）。首次安装后重启 DSH Web，再在「设置 → 皮肤管理」中选择 Deepcel，之后切换走配置热重载。包名为 `@dsh-external/dsh-client-ui-skin-deepcel`，wiring id 为 `ui-skin-deepcel`。
+`#path:` 只用于子目录（仅皮肤管理器需要）；PowerShell 中 `#` 是注释起始，spec 必须用单引号包裹（将 `web` 替换为你的 profile 名称）。首次安装后重启 DSH Web，再在「设置 → 皮肤管理」中选择 Deepcel，之后切换走配置热重载。包名为 `@dsh-external/dsh-client-ui-skin-deepcel`，wiring id 为 `ui-skin-deepcel`。
 
 ## 开发与构建
 

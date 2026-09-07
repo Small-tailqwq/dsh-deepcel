@@ -41,14 +41,15 @@ the skin is recommended — it switches skins and adjusts this skin's options:
 
 ```powershell
 dsh plugin --profile web add 'github:Small-tailqwq/dsh-deep-whale#path:/skin-manager'
-dsh plugin --profile web add 'github:Small-tailqwq/dsh-deepcel#path:/deepcel'
+dsh plugin --profile web add 'github:Small-tailqwq/dsh-deepcel'
 ```
 
-`#path:` selects a subdirectory; in PowerShell `#` starts a comment, so the
-spec must be wrapped in single quotes (replace `web` with your profile name).
-Restart DSH Web after the first install, then pick Deepcel in
-**Settings → Skin manager**; later switches use config hot-reload. The package
-name is `@dsh-external/dsh-client-ui-skin-deepcel`, wiring id `ui-skin-deepcel`.
+`#path:` is only for subdirectories (needed by the skin manager only); in
+PowerShell `#` starts a comment, so the spec must be wrapped in single quotes
+(replace `web` with your profile name). Restart DSH Web after the first
+install, then pick Deepcel in **Settings → Skin manager**; later switches use
+config hot-reload. The package name is
+`@dsh-external/dsh-client-ui-skin-deepcel`, wiring id `ui-skin-deepcel`.
 
 ## Development & Build
 

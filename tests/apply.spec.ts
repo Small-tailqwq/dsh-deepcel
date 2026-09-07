@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /** Deepcel skin apply/dispose contract and workbook chrome tests. */
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context, type Fiber } from '@deepseek-ai/cordis'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -21,7 +21,7 @@ interface TestLayout {
 }
 
 interface TestSessions {
-  current?: string
+  current: string | undefined
   opens: string[]
   list: { getSnapshot(): { current?: string } }
   open(id: string): void
@@ -49,7 +49,9 @@ function makeSessions(current?: string): TestSessions {
   const sessions: TestSessions = {
     current,
     opens: [],
-    list: { getSnapshot: () => ({ current: sessions.current }) },
+    list: {
+      getSnapshot: () => sessions.current === undefined ? {} : { current: sessions.current },
+    },
     open(id) {
       this.opens.push(id)
       this.current = id
@@ -77,6 +79,7 @@ afterEach(async () => {
   fiber = undefined
   document.body.innerHTML = ''
   document.title = ''
+  vi.restoreAllMocks()
 })
 
 describe('Deepcel skin apply', () => {
@@ -213,7 +216,7 @@ describe('Deepcel skin apply', () => {
   })
 
   it('keeps nested permission menu labels visible inside the composer', () => {
-    const stylesheet = readFileSync(resolve(process.cwd(), 'src/client/deepcel.module.css'), 'utf8')
+    const stylesheet = readFileSync(resolve(process.cwd(), 'src/client/skin.module.css'), 'utf8')
     expect(stylesheet).toContain("[class*='modes'] button:not([role='menuitem'])::after")
     expect(stylesheet).toContain("[role='menu'] [role='menuitem'] > span")
     expect(stylesheet).toContain("[role='menu'] [role='menuitem']::after")
@@ -223,7 +226,7 @@ describe('Deepcel skin apply', () => {
     expect(selectionRule).not.toContain('transform: translateY')
     expect(stylesheet).toMatch(/> \[class\*='_card'\]\[style\*='left'\] \{\s*z-index: 1000001 !important;/)
     expect(stylesheet).toMatch(/\[class\*='composerStack'\][\s\S]*?\) \{\s*position: relative;\s*z-index: 2;/)
-    expect(stylesheet).toMatch(/\[data-phase='active'\] \[data-deepcel-workbook-flow\] \[data-deepcel-composer-range\] \{[\s\S]*?position: relative !important;[\s\S]*?grid-column: 2 \/ span 12;/)
+    expect(stylesheet).toMatch(/\[data-phase='active'\] \[data-deepcel-workbook-flow\] \[data-deepcel-composer-range\] \{[\s\S]*?position: relative !important;[\s\S]*?grid-column: 2 \/ span var\(--deepcel-chat-columns, 12\);/)
     expect(stylesheet).toMatch(/\[data-phase='active'\] \[data-conversation-scroll\]\[data-deepcel-workbook-flow\] \{[\s\S]*?display: grid !important;[\s\S]*?grid-auto-rows: var\(--deepcel-row-height\);/)
     expect(stylesheet).toContain('[data-deepcel-flow-container]')
     expect(stylesheet).toMatch(/\[data-phase='active'\] \[data-deepcel-workbook-flow\] \[data-composer-card\] \{[\s\S]*?display: grid !important;[\s\S]*?grid-template-rows:/)
@@ -232,11 +235,10 @@ describe('Deepcel skin apply', () => {
     expect(stylesheet).toContain("[data-deepcel-composer-range] :has(> [data-composer-card])")
     expect(stylesheet).not.toContain("[data-chat-flow-kind='assistant-step'] > * > * > div")
     expect(stylesheet).toContain("content: 'COMMENT';")
-    expect(stylesheet).toContain('content-visibility: auto;')
-    expect(stylesheet).toMatch(/\[data-chat-flow-kind='turn-tail'\]\[data-deepcel-message-range\] \{[\s\S]*?content-visibility: visible;/)
-    expect(stylesheet).toMatch(/\[data-time-hover-root\] > \[class\*='actions'\]\[data-deepcel-content-cell\] \{[\s\S]*?overflow: visible;/)
-    expect(stylesheet).toMatch(/\[data-time-hover-root\] > \[class\*='actions'\] > button\[aria-label\] \{[\s\S]*?min-width: max-content;/)
-    expect(stylesheet).toMatch(/\[data-time-hover-root\] \[role='tooltip'\] \{[\s\S]*?color: #fff !important;/)
+    expect(stylesheet).toMatch(/\[data-deepcel-message-range\]\[hidden='until-found'\] \{[\s\S]*?height: 0;[\s\S]*?content-visibility: hidden;/)
+    expect(stylesheet).toMatch(/\[data-turn-tail\]\[data-actions-reveal\] > \[class\*='actions'\]\[data-deepcel-content-cell\] \{[\s\S]*?overflow: visible;/)
+    expect(stylesheet).toMatch(/\[data-turn-tail\]\[data-actions-reveal\] > \[class\*='actions'\] > button\[aria-label\] \{[\s\S]*?min-width: max-content;/)
+    expect(stylesheet).toMatch(/\[data-turn-tail\] \[role='tooltip'\] \{[\s\S]*?color: #fff !important;/)
     expect(stylesheet).toMatch(/\[data-sample='bash'\]\[data-variant='bash'\]\[data-deepcel-content-cell\] \{[\s\S]*?display: flex;/)
     expect(stylesheet).toMatch(/\[data-sample='bash'\]\[data-variant='bash'\] \+ \* > \[data-terminal\]\[data-deepcel-content-cell\] \{[\s\S]*?padding: 0 !important;/)
     expect(stylesheet).toMatch(/\[data-deepcel-formula-owner\] \[data-question-key\][\s\S]*?pointer-events: auto !important;/)
@@ -257,14 +259,14 @@ describe('Deepcel skin apply', () => {
     expect(stylesheet).toMatch(/button\[class\*='bottomClose'\]::after \{[\s\S]*?content: '关闭' !important;/)
     expect(stylesheet).toMatch(/\[class\*='terminal'\] :global\(\.xterm\) \{[\s\S]*?width: 100% !important;/)
     expect(stylesheet).toMatch(/\[class\*='_panel'\]\[role='dialog'\] \[class\*='_header'\] button:has\(> svg\):has\(> span\) > svg \{[\s\S]*?display: block !important;[\s\S]*?opacity: 1 !important;/)
-    expect(stylesheet).toMatch(/:global\(#root\) \[data-phase\] textarea\[data-deepcel-formula-input\] \{[\s\S]*?position: fixed !important;[\s\S]*?inset: 89px 0 auto 106px !important;/)
+    expect(stylesheet).toMatch(/:global\(#root\) \[data-phase\] \[data-composer-card\] \{[\s\S]*?position: fixed !important;[\s\S]*?inset: 89px 0 auto 106px !important;/)
     expect(stylesheet).toMatch(/\.workbookChrome \{[\s\S]*?pointer-events: none;/)
     expect(stylesheet).toMatch(/\.formulaRow \{[\s\S]*?pointer-events: none;/)
     expect(stylesheet).toContain('height: var(--deepcel-formula-height) !important;')
     expect(stylesheet).toMatch(/\[data-deepcel-formula-owner\] \{[\s\S]*?z-index: 1000002 !important;[\s\S]*?pointer-events: none !important;/)
-    expect(stylesheet).toContain('-webkit-text-fill-color: var(--deepcel-ink) !important;')
+    expect(stylesheet).toContain('-webkit-text-fill-color: currentColor !important;')
     expect(stylesheet).toContain('pointer-events: auto !important;')
-    expect(stylesheet).toMatch(/textarea\[data-deepcel-formula-input\] \{[\s\S]*?border-bottom: 1px solid var\(--deepcel-grid-strong\) !important;/)
+    expect(stylesheet).toMatch(/\[data-composer-card\] \{[\s\S]*?border-bottom: 1px solid var\(--deepcel-grid-strong\) !important;/)
     expect(stylesheet).not.toContain('body[data-dsh-deepcel] [data-composer-seat]')
     expect(stylesheet).not.toContain('body[data-dsh-deepcel] #root')
     expect(stylesheet).toContain('.choiceDialog')
@@ -308,7 +310,13 @@ describe('Deepcel skin apply', () => {
       .toBe('1 turn | LLM 2s | Input 1K tok')
   })
 
-  it('scrolls worksheet coordinates through negative rows and sizes messages to whole cells', async () => {
+  it('uses absolute worksheet scroll coordinates and sizes messages to whole cells', async () => {
+    const createRange = document.createRange.bind(document)
+    vi.spyOn(document, 'createRange').mockImplementation(() => {
+      const range = createRange()
+      range.getClientRects = () => [new DOMRect(0, 0, 192, 22)] as unknown as DOMRectList
+      return range
+    })
     const root = document.createElement('div')
     root.id = 'root'
     const phase = document.createElement('div')
@@ -321,6 +329,14 @@ describe('Deepcel skin apply', () => {
     const message = document.createElement('div')
     message.dataset.chatFlowKind = 'assistant-message'
     flow.append(message)
+    const command = document.createElement('div')
+    command.dataset.chatFlowKind = 'command-input'
+    const commandRow = document.createElement('div')
+    commandRow.dataset.commandInput = ''
+    commandRow.textContent = '/goal 验证工作簿目标栏'
+    Object.defineProperty(commandRow, 'scrollHeight', { value: 44 })
+    command.append(commandRow)
+    flow.append(command)
     scroll.append(flow)
     phase.append(scroll)
     root.append(phase)
@@ -332,10 +348,12 @@ describe('Deepcel skin apply', () => {
     scroll.dispatchEvent(new Event('scroll'))
     await new Promise(resolve => { requestAnimationFrame(() => { resolve(undefined) }) })
 
-    expect(document.body.style.getPropertyValue('--deepcel-row-offset')).toBe('-3')
-    expect(document.querySelector('[data-skin-chrome="rows"]')?.firstElementChild?.textContent).toBe('-3')
+    expect(document.body.style.getPropertyValue('--deepcel-row-offset')).toBe('7')
+    expect(document.querySelector('[data-skin-chrome="rows"]')?.firstElementChild?.textContent).toBe('7')
     expect(message.hasAttribute('data-deepcel-message-range')).toBe(true)
     expect(message.style.getPropertyValue('--deepcel-message-height')).toBe('24px')
+    expect(command.style.getPropertyValue('--deepcel-message-height')).toBe('48px')
+    expect(command.hasAttribute('data-deepcel-single-line')).toBe(false)
   })
 
   it('keeps a blank-cell selection aligned during long worksheet scrolling', async () => {
@@ -357,11 +375,11 @@ describe('Deepcel skin apply', () => {
     scroll.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 100, clientY: 200 }))
 
     const selection = document.querySelector<HTMLElement>('[data-skin-selection]')
-    expect(document.body.style.getPropertyValue('--deepcel-row-offset')).toBe('10')
-    expect(document.body.style.getPropertyValue('--deepcel-row-offset-y')).toBe('-240px')
+    expect(document.body.style.getPropertyValue('--deepcel-row-offset')).toBe('20')
+    expect(document.body.style.getPropertyValue('--deepcel-row-offset-y')).toBe('-480px')
     expect(document.body.style.getPropertyValue('--deepcel-scroll-y')).toBe('-5px')
-    expect(document.querySelector('[data-cell-name]')?.textContent).toBe('B13')
-    expect(selection?.style.getPropertyValue('--deepcel-selection-y')).toBe('288px')
+    expect(document.querySelector('[data-cell-name]')?.textContent).toBe('B23')
+    expect(selection?.style.getPropertyValue('--deepcel-selection-y')).toBe('528px')
     expect(selection?.hasAttribute('data-active')).toBe(true)
 
     scroll.scrollTop = 2240
@@ -611,7 +629,10 @@ describe('Deepcel skin apply', () => {
     navigation.append(title)
     titleRow.append(navigation, document.createElement('div'))
     header.append(titleRow)
-    phase.append(header)
+    const headerSlot = document.createElement('div')
+    headerSlot.dataset.slot = 'conversation.session.header'
+    headerSlot.append(header)
+    phase.append(headerSlot)
     root.append(sessionRow, phase)
     const nativeNewSession = document.createElement('button')
     nativeNewSession.setAttribute('aria-label', 'New session')
@@ -646,7 +667,7 @@ describe('Deepcel skin apply', () => {
     expect(sessionOpens).toBe(0)
   })
 
-  it('projects the registered views into Home and lifts title, model, header actions, and native input', async () => {
+  it('projects registered views and title while retaining native header actions and the rc1 editor', async () => {
     const root = document.createElement('div')
     root.id = 'root'
     const phase = document.createElement('div')
@@ -675,13 +696,15 @@ describe('Deepcel skin apply', () => {
       tab.setAttribute('role', 'tab')
       tab.setAttribute('aria-selected', String(index === 0))
       tab.textContent = label
-      tab.addEventListener('click', () => { viewClicks[index] += 1 })
+      tab.addEventListener('click', () => { viewClicks[index] = (viewClicks[index] ?? 0) + 1 })
       tabList.append(tab)
     }
     header.append(titleRow, tabList)
     const composer = document.createElement('div')
     composer.dataset.composerCard = ''
-    const textarea = document.createElement('textarea')
+    const textarea = document.createElement('div')
+    textarea.dataset.composerInput = ''
+    textarea.contentEditable = 'true'
     let slashKeys = 0
     textarea.addEventListener('keydown', event => { if (event.key === '/') slashKeys += 1 })
     const modes = document.createElement('div')
@@ -704,7 +727,10 @@ describe('Deepcel skin apply', () => {
     const composerSeat = document.createElement('div')
     composerSeat.dataset.composerSeat = ''
     composerSeat.append(composer)
-    phase.append(header, composerSeat)
+    const headerSlot = document.createElement('div')
+    headerSlot.dataset.slot = 'conversation.session.header'
+    headerSlot.append(header)
+    phase.append(headerSlot, composerSeat)
     root.append(phase)
     document.body.append(root)
 
@@ -717,15 +743,13 @@ describe('Deepcel skin apply', () => {
     expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [role="tab"]')].map(tab => tab.textContent))
       .toEqual(['Chat', '轨迹', 'Timeline'])
     expect(header.hasAttribute('data-deepcel-header-source')).toBe(true)
-    const projectedTitle = document.querySelector('[data-header-controls]')?.nextElementSibling
-    expect(projectedTitle?.textContent).toBe('你好| 标准模式')
-    expect(projectedTitle?.textContent).not.toContain('DeepSeek V4')
-    expect(document.querySelector('[data-header-controls]')?.textContent).toBe('重生成')
-    expect(document.querySelector('[data-header-controls]')?.parentElement?.children.item(2))
-      .toBe(document.querySelector('[data-header-controls]'))
+    const projectedTitle = document.querySelector('[data-skin-chrome="workbook"] [class*="titleCell"]')
+    expect(projectedTitle?.textContent).toBe('你好')
+    expect(regenerate.closest('header')).toBe(header)
+    expect(document.querySelector('[data-header-controls]')).toBeNull()
 
     document.querySelectorAll<HTMLButtonElement>('[data-skin-chrome="workbook"] [role="tab"]')[2]?.click()
-    document.querySelector<HTMLButtonElement>('[data-skin-control="header-action-1"]')?.click()
+    regenerate.click()
     expect(viewClicks).toEqual([0, 0, 1])
     expect(regenerations).toBe(1)
     expect(textarea.hasAttribute('data-deepcel-formula-input')).toBe(true)

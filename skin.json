@@ -23,5 +23,6 @@
     "light": "preview/light.webp",
     "dark": "preview/dark.webp"
   },
-  "order": 6
+  "order": 6,
+  "dshCompatibility": "0.1.2rc1"
 }

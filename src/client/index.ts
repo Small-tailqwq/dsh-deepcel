@@ -5,7 +5,7 @@
  * decorative row, column, ribbon, formula, sheet-tab, and status cells.
  */
 import type { Context } from '@deepseek-ai/cordis'
-import css from './deepcel.module.css'
+import css from './skin.module.css'
 
 const SKIN_TITLE = 'Workbook Grid · DeepSeek Harness'
 
@@ -94,7 +94,6 @@ interface WorkbookControls {
   readonly tools: HTMLDivElement
   readonly formulaCell: HTMLElement
   readonly titleCell: HTMLElement
-  readonly headerControls: HTMLDivElement
   readonly newSession: HTMLButtonElement
   readonly newWorkspace: HTMLButtonElement
   readonly settings: HTMLButtonElement
@@ -209,9 +208,9 @@ function activeComposer(): HTMLElement | null {
 }
 
 function nativeHeroChoiceTriggers(): {
-  row?: HTMLElement
-  workspace?: HTMLButtonElement
-  preset?: HTMLButtonElement
+  row: HTMLElement | undefined
+  workspace: HTMLButtonElement | undefined
+  preset: HTMLButtonElement | undefined
 } {
   const row = document.querySelector<HTMLElement>("#root [data-phase='hero'] [class*='heroWorkspaceRow']") ?? undefined
   const buttons = [...row?.querySelectorAll<HTMLButtonElement>(
@@ -433,19 +432,6 @@ function rangeName(range: CellRange): string {
   return start === end ? start : `${start}:${end}`
 }
 
-function hasOneVisualTextLine(element: HTMLElement): boolean | undefined {
-  const range = document.createRange()
-  range.selectNodeContents(element)
-  if (typeof range.getClientRects !== 'function') return undefined
-  const rects = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0)
-  if (rects.length === 0) return undefined
-  const lineTops: number[] = []
-  for (const rect of rects) {
-    if (!lineTops.some(top => Math.abs(top - rect.top) < 1)) lineTops.push(rect.top)
-  }
-  return lineTops.length === 1
-}
-
 function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
   const grid = document.createElement('div')
   grid.className = cls('worksheetGrid')
@@ -459,8 +445,6 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
 
   let rowOffset = 0
   let scrollport: HTMLElement | null = null
-  let baselineScrollTop = 0
-  let baselineFrame: number | undefined
   let reconcileFrame: number | undefined
   const messageElements = new Set<HTMLElement>()
   const dirtyMessages = new Set<HTMLElement>()
@@ -507,24 +491,18 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
   }
 
   const sizeMessage = (message: HTMLElement): void => {
-    const contentHeight = Math.max(
-      message.scrollHeight,
-      ...[...message.children].map(child => child instanceof HTMLElement ? child.scrollHeight : 0),
-    )
-    const text = message.textContent?.trim() ?? ''
-    const visualSingleLine = hasOneVisualTextLine(message)
-    const singleLine = text !== '' && !text.includes('\n')
-      && (visualSingleLine ?? contentHeight <= ROW_HEIGHT * 1.5)
-    const height = singleLine
-      ? ROW_HEIGHT
-      : Math.max(ROW_HEIGHT, Math.ceil(contentHeight / ROW_HEIGHT) * ROW_HEIGHT)
+    // Measure native content at its stable column width; the allocated grid
+    // height must not switch the layout or typography used by the next read.
+    const roots = [...message.children].flatMap(child =>
+      getComputedStyle(child).display === 'contents' ? [...child.children] : [child])
+    const contentHeight = Math.max(0, ...roots.map(child =>
+      child instanceof HTMLElement ? Math.max(child.scrollHeight, child.getBoundingClientRect().height) : 0))
+    const height = Math.max(ROW_HEIGHT, Math.ceil(contentHeight / ROW_HEIGHT) * ROW_HEIGHT)
     const value = `${height}px`
     if (message.style.getPropertyValue('--deepcel-message-height') !== value) {
       message.style.setProperty('--deepcel-message-height', value)
     }
     message.style.setProperty('--deepcel-message-rows', String(height / ROW_HEIGHT))
-    if (singleLine) message.dataset.deepcelSingleLine = ''
-    else delete message.dataset.deepcelSingleLine
     message.dataset.deepcelMessageRange = ''
   }
 
@@ -554,6 +532,8 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
 
   const syncMessageCells = (message: HTMLElement): void => {
     clearMessageCells(message)
+    if (message.hasAttribute('hidden')) return
+    if (message.querySelector('[data-disclosure-row]') !== null) return
     if (message.querySelector("[class*='userRow']") !== null) return
 
     const producedFilesRoot = message.querySelector<HTMLElement>('[data-produced-files-row]')?.parentElement
@@ -563,10 +543,12 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
       ? []
       : [...shellBody.children].filter((child): child is HTMLElement => child instanceof HTMLElement)
     const candidates = [...new Set([
-      ...(producedFilesRoot === undefined ? [] : [producedFilesRoot]),
+      ...(producedFilesRoot == null ? [] : [producedFilesRoot]),
       ...(shellSummary === null ? [] : [shellSummary, ...shellBodyCells]),
       ...message.querySelectorAll<HTMLElement>(CONTENT_CELL_SELECTOR),
     ])]
+      .filter((candidate): candidate is HTMLElement => candidate instanceof HTMLElement)
+      .filter(candidate => candidate.closest('[hidden]') === null)
       .filter((candidate) => {
         const ancestor = candidate.parentElement?.closest<HTMLElement>(CONTENT_CELL_SELECTOR)
         return ancestor === null || ancestor === undefined || !message.contains(ancestor)
@@ -606,26 +588,23 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
       messageResizeObserver?.unobserve(message)
       clearMessageCells(message)
       delete message.dataset.deepcelMessageRange
-      delete message.dataset.deepcelSingleLine
       message.style.removeProperty('--deepcel-message-height')
       message.style.removeProperty('--deepcel-message-rows')
     }
     messageElements.clear()
     for (const message of live) messageElements.add(message)
     for (const message of dirtyMessages) {
-      if (live.has(message)) syncMessageCells(message)
+      if (live.has(message)) {
+        syncMessageCells(message)
+        sizeMessage(message)
+      }
     }
     dirtyMessages.clear()
   }
 
   const sizeComposer = (): void => {
     if (composerSeat === null) return
-    const card = composerSeat.querySelector<HTMLElement>('[data-composer-card]')
-    const contentHeight = Math.max(
-      composerSeat.scrollHeight,
-      card?.scrollHeight ?? 0,
-      card?.getBoundingClientRect().height ?? 0,
-    )
+    const contentHeight = composerSeat.scrollHeight
     composerSeat.style.setProperty(
       '--deepcel-composer-rows',
       String(Math.max(1, Math.ceil(contentHeight / ROW_HEIGHT))),
@@ -637,12 +616,45 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
     ? undefined
     : new ResizeObserver(() => { sizeComposer() })
 
+  const trajectoryCells = new Set<HTMLElement>()
+  const syncTrajectoryRows = (): void => {
+    const live = new Set<HTMLElement>()
+    for (const row of document.querySelectorAll<HTMLElement>('tr[data-trajectory-row-key]')) {
+      const cell = row.querySelector<HTMLElement>('td:first-child')
+      if (cell === null) continue
+      cell.dataset.deepcelTrajectoryRow = row.getAttribute('aria-rowindex') ?? ''
+      live.add(cell)
+    }
+    for (const cell of trajectoryCells) {
+      if (!live.has(cell)) delete cell.dataset.deepcelTrajectoryRow
+    }
+    trajectoryCells.clear()
+    for (const cell of live) trajectoryCells.add(cell)
+  }
+
   const syncFlowLayout = (): void => {
+    syncTrajectoryRows()
     const nextContainers = new Set<HTMLElement>()
     const flow = scrollport?.querySelector<HTMLElement>('[data-chat-flow]') ?? null
     if (scrollport !== null) {
       if (flow === null) delete scrollport.dataset.deepcelWorkbookFlow
-      else scrollport.dataset.deepcelWorkbookFlow = ''
+      else {
+        scrollport.dataset.deepcelWorkbookFlow = ''
+        const phase = scrollport.closest<HTMLElement>("[data-phase='active']")
+        const preference = Number.parseFloat(phase?.style.getPropertyValue('--dsh-chat-user-width') ?? '')
+        const available = scrollport.clientWidth || window.innerWidth
+        const columns = Math.max(1, Math.floor(Math.min(
+          Number.isFinite(preference) ? preference : CHAT_WIDTH,
+          available - ROW_GUTTER - CELL_WIDTH,
+        ) / CELL_WIDTH))
+        const offset = Math.max(0, Math.round((available - ROW_GUTTER - columns * CELL_WIDTH) / (2 * CELL_WIDTH))) * CELL_WIDTH
+        for (const [key, value] of [
+          ['--deepcel-chat-columns', String(columns)],
+          ['--deepcel-chat-x', `${offset}px`],
+        ] as const) {
+          if (scrollport.style.getPropertyValue(key) !== value) scrollport.style.setProperty(key, value)
+        }
+      }
     }
     let container = flow
     while (container !== null && container !== scrollport) {
@@ -682,7 +694,7 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
 
   const syncScrollCoordinates = (): void => {
     if (scrollport === null) return
-    const delta = scrollport.scrollTop - baselineScrollTop
+    const delta = scrollport.scrollTop
     const nextOffset = Math.trunc(delta / ROW_HEIGHT)
     const residual = delta - nextOffset * ROW_HEIGHT
     document.body.style.setProperty('--deepcel-scroll-y', `${-residual}px`)
@@ -708,6 +720,8 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
     }
     scrollport?.removeEventListener('scroll', onScroll)
     scrollport?.style.removeProperty('--deepcel-flow-padding-top')
+    scrollport?.style.removeProperty('--deepcel-chat-columns')
+    scrollport?.style.removeProperty('--deepcel-chat-x')
     scrollport = next
     rowOffset = 0
     document.body.style.setProperty('--deepcel-scroll-y', '0px')
@@ -719,19 +733,10 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
       syncFlowLayout()
       return
     }
-    baselineScrollTop = scrollport.scrollTop
     scrollport.addEventListener('scroll', onScroll, { passive: true })
-    if (baselineFrame !== undefined) cancelAnimationFrame(baselineFrame)
-    baselineFrame = requestAnimationFrame(() => {
-      baselineFrame = requestAnimationFrame(() => {
-        baselineFrame = undefined
-        if (scrollport === null) return
-        baselineScrollTop = scrollport.scrollTop
-        syncScrollCoordinates()
-      })
-    })
     syncFlowLayout()
     syncMessages()
+    syncScrollCoordinates()
   }
 
   const resize = (): void => {
@@ -785,6 +790,7 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
   const onSheetClick = (event: MouseEvent): void => {
     if (!(event.target instanceof HTMLElement)) return
     if (event.target.closest('[data-skin-chrome], [role="dialog"]') !== null) return
+    if (event.target.closest('button, [role="button"], a, input, textarea, select, [contenteditable="true"]') !== null) return
     if (event.target.closest('#root [data-phase], #root [data-conversation-scroll]') === null) return
     const sidebarOffset = Number.parseFloat(document.body.style.getPropertyValue('--deepcel-sidebar-offset')) || 0
     const origin = sidebarOffset + ROW_GUTTER
@@ -835,8 +841,13 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
 
   document.addEventListener('click', onSheetClick, true)
   const worksheetObserver = new MutationObserver((records) => {
+    let changed = false
     for (const record of records) {
       const target = record.target instanceof HTMLElement ? record.target : record.target.parentElement
+      if (target?.closest('[data-skin-chrome], [data-skin-grid], [data-skin-selection]') !== null) continue
+      if (record.type === 'attributes' && record.attributeName !== 'aria-rowindex' && record.attributeName !== 'hidden'
+        && target !== scrollport?.closest("[data-phase='active']")) continue
+      changed = true
       const message = target?.closest<HTMLElement>('[data-chat-flow-kind]')
       if (message !== null && message !== undefined) dirtyMessages.add(message)
       for (const node of record.addedNodes) {
@@ -847,13 +858,13 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
         if (addedMessage !== null) dirtyMessages.add(addedMessage)
       }
     }
-    if (reconcileFrame !== undefined) return
+    if (!changed || reconcileFrame !== undefined) return
     reconcileFrame = requestAnimationFrame(() => {
       reconcileFrame = undefined
       bindScrollport()
     })
   })
-  worksheetObserver.observe(document.body, { childList: true, subtree: true })
+  worksheetObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'aria-rowindex', 'hidden'] })
   resize()
   return {
     grid,
@@ -863,15 +874,15 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
     dispose() {
       document.removeEventListener('click', onSheetClick, true)
       worksheetObserver.disconnect()
+      for (const cell of trajectoryCells) delete cell.dataset.deepcelTrajectoryRow
+      trajectoryCells.clear()
       scrollport?.removeEventListener('scroll', onScroll)
-      if (baselineFrame !== undefined) cancelAnimationFrame(baselineFrame)
       if (reconcileFrame !== undefined) cancelAnimationFrame(reconcileFrame)
       messageResizeObserver?.disconnect()
       composerResizeObserver?.disconnect()
       for (const message of messageElements) {
         clearMessageCells(message)
         delete message.dataset.deepcelMessageRange
-        delete message.dataset.deepcelSingleLine
         message.style.removeProperty('--deepcel-message-height')
         message.style.removeProperty('--deepcel-message-rows')
       }
@@ -881,6 +892,8 @@ function createWorksheetSurface(nameCell: HTMLSpanElement): WorksheetSurface {
         composerSeat.style.removeProperty('--deepcel-composer-rows')
       }
       scrollport?.style.removeProperty('--deepcel-flow-padding-top')
+      scrollport?.style.removeProperty('--deepcel-chat-columns')
+      scrollport?.style.removeProperty('--deepcel-chat-x')
       if (scrollport !== null) delete scrollport.dataset.deepcelWorkbookFlow
       document.body.style.removeProperty('--deepcel-composer-x')
       document.body.style.removeProperty('--deepcel-chat-x')
@@ -907,13 +920,9 @@ function createWorkbookChrome(): {
   const titleRow = document.createElement('div')
   titleRow.className = cls('titleRow')
   const titleCell = makeCell('titleCell', 'DSH Workbook')
-  const headerControls = document.createElement('div')
-  headerControls.className = cls('headerControls')
-  headerControls.dataset.headerControls = ''
   titleRow.append(
     makeCell('quickCell', 'Save'),
     makeCell('quickCell', 'Undo'),
-    headerControls,
     titleCell,
     makeCell('accountCell', 'Shared'),
   )
@@ -969,7 +978,7 @@ function createWorkbookChrome(): {
     chrome,
     columns,
     controls: {
-      ribbonTabs, tools, formulaCell, titleCell, headerControls, newSession, newWorkspace, settings,
+      ribbonTabs, tools, formulaCell, titleCell, newSession, newWorkspace, settings,
       workspace, preset, permission, model, thinking,
     },
     nameCell,
@@ -1037,7 +1046,7 @@ function createStatusChrome(locale: LocalePort, layout: LayoutPort): {
 }
 
 function activeSessionHeader(): HTMLElement | null {
-  return document.querySelector<HTMLElement>("#root [data-phase='active'] > header")
+  return document.querySelector<HTMLElement>("#root [data-phase='active'] [data-slot='conversation.session.header'] > header")
 }
 
 function selectedNativeSessionRow(): HTMLElement | undefined {
@@ -1060,31 +1069,6 @@ function currentSessionTitle(header: HTMLElement): string {
   const current = navigation?.querySelector<HTMLButtonElement>('button:disabled')
     ?? navigation?.querySelector<HTMLButtonElement>('button:last-of-type')
   return current?.textContent?.trim() || navigation?.textContent?.trim() || ''
-}
-
-interface HeaderProjection {
-  readonly label: string
-  readonly source?: HTMLButtonElement
-}
-
-function headerActionProjections(actions: Element | null | undefined): HeaderProjection[] {
-  if (actions === null || actions === undefined) return []
-  const projections: HeaderProjection[] = []
-  for (const entry of actions.children) {
-    const buttons = entry instanceof HTMLButtonElement
-      ? [entry]
-      : [...entry.querySelectorAll<HTMLButtonElement>('button')]
-    if (buttons.length > 0) {
-      for (const button of buttons) {
-        const label = button.textContent?.trim() || button.getAttribute('aria-label') || ''
-        if (label !== '') projections.push({ label, source: button })
-      }
-      continue
-    }
-    const label = entry.textContent?.trim() ?? ''
-    if (label !== '') projections.push({ label })
-  }
-  return projections
 }
 
 function createChoiceDialog(
@@ -1140,7 +1124,7 @@ export function apply(ctx: Context): void {
   const layout = (ctx as Context & { layout: LayoutPort }).layout
   const sessions = (ctx as Context & { sessions: SessionsPort }).sessions
   const originalTitle = document.title
-  body.dataset.dshDeepcel = ''
+  body.setAttribute('data-dsh-deepcel', '')
 
   const { chrome: workbook, columns, controls, nameCell } = createWorkbookChrome()
   const worksheet = createWorksheetSurface(nameCell)
@@ -1157,7 +1141,7 @@ export function apply(ctx: Context): void {
   let activeRibbon: RibbonTabId = 'file'
   let hadActiveSession = false
   let choiceDialog: HTMLDivElement | null = null
-  let formulaInput: HTMLTextAreaElement | null = null
+  let formulaInput: HTMLElement | null = null
   let formulaHeight = FORMULA_HEIGHT
   let choiceGeneration = 0
   let workbookSequence = 0
@@ -1435,36 +1419,11 @@ export function apply(ctx: Context): void {
     }
     if (header === null) {
       controls.titleCell.textContent = 'DSH Workbook'
-      controls.headerControls.replaceChildren()
-      delete controls.titleCell.dataset.titleSignature
       return
     }
     header.dataset.deepcelHeaderSource = ''
     const title = currentSessionTitle(header)
-    const titleRow = header.firstElementChild
-    const actions = titleRow?.lastElementChild
-    const actionItems = headerActionProjections(actions)
-    const modeItem = actionItems.find(item => item.source === undefined)
-    const controlItems = actionItems.filter(item => item !== modeItem)
-    const titleSignature = [title, modeItem?.label ?? '', ...controlItems.map(item => item.label)].join('|')
-    if (controls.titleCell.dataset.titleSignature !== titleSignature) {
-      const projected: HTMLElement[] = [makeCell('topTitle', title)]
-      if (modeItem !== undefined) projected.push(makeCell('topMode', `| ${modeItem.label}`))
-      const projectedControls: HTMLElement[] = []
-      for (const item of controlItems) {
-        const index = actionItems.indexOf(item)
-        if (item.source === undefined) projectedControls.push(makeCell('topToken', item.label))
-        else {
-          const proxy = makeControl('topToken', `header-action-${index}`)
-          proxy.textContent = item.label
-          proxy.addEventListener('click', () => { item.source?.click() })
-          projectedControls.push(proxy)
-        }
-      }
-      controls.titleCell.replaceChildren(...projected)
-      controls.headerControls.replaceChildren(...projectedControls)
-      controls.titleCell.dataset.titleSignature = titleSignature
-    }
+    if (controls.titleCell.textContent !== title) controls.titleCell.textContent = title
   }
   const resizeFormulaInput = (): void => {
     body.style.setProperty('--deepcel-formula-height', `${FORMULA_HEIGHT}px`)
@@ -1477,18 +1436,21 @@ export function apply(ctx: Context): void {
       FORMULA_HEIGHT + (FORMULA_MAX_LINES - 1) * FORMULA_LINE_HEIGHT,
       10 + lines * FORMULA_LINE_HEIGHT,
     )
-    body.style.setProperty('--deepcel-formula-height', `${nextHeight}px`)
-    body.style.setProperty('--deepcel-ribbon-height', `${RIBBON_HEIGHT + nextHeight - FORMULA_HEIGHT}px`)
+    const attachmentHeight = activeComposer()?.querySelector("[data-slot='conversation.input.attachments'] > [class*='rail']") === null ? 0 : 72
+    const totalHeight = nextHeight + (formulaInput === null ? 0 : attachmentHeight)
+    body.style.setProperty('--deepcel-editor-height', `${nextHeight}px`)
+    body.style.setProperty('--deepcel-formula-height', `${totalHeight}px`)
+    body.style.setProperty('--deepcel-ribbon-height', `${RIBBON_HEIGHT + totalHeight - FORMULA_HEIGHT}px`)
     formulaInput?.toggleAttribute('data-deepcel-formula-overflow', contentHeight > nextHeight)
-    if (formulaHeight === nextHeight) return
-    formulaHeight = nextHeight
+    if (formulaHeight === totalHeight) return
+    formulaHeight = totalHeight
     fillRowCoordinates(rows)
     worksheet.resize()
   }
   const syncFormulaInput = (): void => {
-    const next = activeComposer()?.querySelector<HTMLTextAreaElement>('textarea') ?? null
+    const next = activeComposer()?.querySelector<HTMLElement>('[data-composer-input]') ?? null
     const nextOwner = next?.closest<HTMLElement>('[data-composer-seat]') ?? null
-    for (const input of document.querySelectorAll<HTMLTextAreaElement>('[data-deepcel-formula-input]')) {
+    for (const input of document.querySelectorAll<HTMLElement>('[data-deepcel-formula-input]')) {
       if (input !== next) delete input.dataset.deepcelFormulaInput
     }
     for (const owner of document.querySelectorAll<HTMLElement>('[data-deepcel-formula-owner]')) {
@@ -1541,6 +1503,8 @@ export function apply(ctx: Context): void {
   window.addEventListener('resize', syncCoordinates)
   const shellObserver = new MutationObserver((records) => {
     const changed = records.some((record) => {
+      const target = record.target instanceof HTMLElement ? record.target : record.target.parentElement
+      if (target?.closest('[data-skin-chrome], [data-skin-grid], [data-skin-selection]') !== null) return false
       if (record.type === 'childList') return true
       if (!(record.target instanceof HTMLElement)) return false
       if (record.attributeName === 'data-sidebar-collapsed') return true
@@ -1593,11 +1557,12 @@ export function apply(ctx: Context): void {
     }
     formulaInput?.removeEventListener('input', resizeFormulaInput)
     closeChoiceDialog()
-    delete body.dataset.dshDeepcel
+    body.removeAttribute('data-dsh-deepcel')
     delete body.dataset.deepcelSidebar
     delete body.dataset.deepcelModelProbing
     body.style.removeProperty('--deepcel-sidebar-offset')
     body.style.removeProperty('--deepcel-formula-height')
+    body.style.removeProperty('--deepcel-editor-height')
     body.style.removeProperty('--deepcel-ribbon-height')
     worksheet.dispose()
     workbook.remove()

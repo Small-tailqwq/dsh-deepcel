@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "output": "src/client/art.generated.ts",
+  "assets": []
+}

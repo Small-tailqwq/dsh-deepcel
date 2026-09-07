@@ -1,37 +1,55 @@
-# dsh-deepcel
+# Deepcel 工作簿
 
-一款模仿 excel 的 dsh 皮肤。
+一款模仿 Excel 的 DSH Web 皮肤。Deepcel 不只替换颜色，而是把现有 UI 入口重新编排为电子表格：功能区管理文件、会话和运行选项；消息、工具、轨迹与输入区落入统一单元格坐标；工作簿标签承载多会话切换。
+
+目标宿主：DSH `0.1.2-rc.1`。函数栏保留原生 Lexical 编辑器、附件和指令；目标、排队消息、轮次导航与用量浮窗使用工作表样式。
+
+## 特性
+
+- 完整的行号、列标、背景网格、活动单元格和工作簿状态栏
+- 对话正文按语义块映射为合并单元格，用户消息使用审阅批注样式
+- 输入内容经函数栏编辑，并随多行内容自动扩展
+- 工作区与会话使用工作簿大纲层级，侧边栏展开时整张工作表同步移动
+- Bash、Pwsh、产物行、消息操作和轨迹表使用工作表记录布局
+- 权限、模型、思考、Agent 预设和工作区选择复用原生行为入口
+- 长会话滚动同步行号、背景网格与选区；切换会话时清空选区
 
 ## 效果预览
 
-点击图片可查看完整尺寸。
-
 | 亮色模式 | 暗色模式 |
 |---|---|
-| [![Deepcel 亮色模式](deepcel/preview/light.webp)](deepcel/preview/light.webp) | [![Deepcel 暗色模式](deepcel/preview/dark.webp)](deepcel/preview/dark.webp) |
-
-## 皮肤
-
-| 皮肤 | 包名 | 说明 | 许可 |
-|---|---|---|---|
-| [deepcel](deepcel/) | `@dsh-external/dsh-client-ui-skin-deepcel` | 将会话、工具、设置和导航重构为可交互的工作表单元格 | BSD-3-Clause |
+| [![Deepcel 亮色模式](preview/light.webp)](preview/light.webp) | [![Deepcel 暗色模式](preview/dark.webp)](preview/dark.webp) |
 
 ## 安装
 
-本仓库仍处于内部测试阶段，仓库为私有可见性。获得仓库访问权限后：
+从仓库根目录把当前包的绝对路径交给 DSH：
 
-```sh
-git clone https://github.com/dsh-external/dsh-deepcel
-cd <harness>
-dsh plugin --profile web add ../dsh-deepcel/deepcel
+```powershell
+dsh plugin --profile web add C:\path\to\dsh-deepcel
 ```
 
-Deepcel 加载即生效，卸载即复原；其 wiring id 为 `ui-skin-deepcel`。
+加载即生效，卸载即复原。包名为 `@dsh-external/dsh-client-ui-skin-deepcel`，wiring id 为 `ui-skin-deepcel`。
 
-## 开发
+## 开发与构建
 
-皮肤工程脚手架来自私有开发仓库 `dsh-external/dsh-web-ui`。本仓库只分发可安装的皮肤成品、源码、测试与预览，不包含整套皮肤中心脚手架。
+本目录是脚手架工作区中的单个皮肤包，目录结构与 `skins/internet-angel-desktop/` 相同。源码位于 `src/`，DOM/CSS 行为回归位于 `tests/`，预构建产物位于 `lib/`。
+
+在脚手架根目录执行：
+
+```powershell
+pnpm install
+pnpm art:embed deepcel
+pnpm --filter ./skins/deepcel build
+pnpm --filter ./skins/deepcel typecheck
+pnpm --filter ./skins/deepcel test
+node scripts/verify-skin.mjs deepcel
+node scripts/audit-bundle.mjs deepcel
+```
+
+Deepcel 当前没有额外嵌入素材；`assets/art.manifest.json` 保留为空 manifest，以便继续使用脚手架的生成与检查入口。
 
 ## 许可与商标
 
-代码以 BSD-3-Clause 许可发布。Deepcel 是独立社区项目，与 Microsoft 无隶属、赞助或背书关系。Microsoft Excel 是 Microsoft 集团公司的商标；本项目不包含 Microsoft 的代码、图标、品牌素材或产品资源。
+BSD-3-Clause，详见 `LICENSE`。
+
+Deepcel 是独立社区项目，与 Microsoft 无隶属、赞助或背书关系。Microsoft Excel 是 Microsoft 集团公司的商标。本项目的名称、包名、DOM scope 和公开元数据均使用 Deepcel，不包含 Microsoft 的代码、图标、品牌素材或产品资源。详细声明见 `NOTICE.md`。

@@ -216,7 +216,6 @@ body[data-dsh-deepcel] .worksheetSelection {
   border: 2px solid var(--deepcel-selection);
   box-shadow: inset 0 0 0 1px var(--deepcel-sheet);
   pointer-events: none;
-  transition: left var(--ds-transition-duration-slow, 240ms) var(--ds-ease-in-out, ease-in-out);
 }
 
 body[data-dsh-deepcel] .worksheetSelection[data-active] {
@@ -319,51 +318,6 @@ body[data-dsh-deepcel] .titleCell {
   letter-spacing: 0.02em;
   transform: translateX(-50%);
   pointer-events: none;
-}
-
-body[data-dsh-deepcel] .headerControls {
-  display: flex;
-  align-items: stretch;
-  height: 100%;
-  min-width: 0;
-}
-
-body[data-dsh-deepcel] :is(.topTitle, .topMode, .topToken) {
-  display: inline-flex;
-  align-items: center;
-  appearance: none;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-body[data-dsh-deepcel] .topMode,
-body[data-dsh-deepcel] .topToken {
-  font-weight: 400;
-  opacity: 0.9;
-}
-
-body[data-dsh-deepcel] button.topToken {
-  cursor: pointer;
-}
-
-body[data-dsh-deepcel] .headerControls .topToken {
-  height: 100%;
-  padding: 0 10px;
-  border-right: 1px solid rgba(255, 255, 255, 0.22);
-  pointer-events: auto;
-}
-
-body[data-dsh-deepcel] .headerControls button.topToken:hover,
-body[data-dsh-deepcel] .headerControls button.topToken[aria-pressed='true'] {
-  background: rgba(255, 255, 255, 0.16);
 }
 
 body[data-dsh-deepcel] .accountCell {
@@ -615,7 +569,19 @@ body[data-dsh-deepcel] .columnCell {
 body[data-dsh-deepcel] .cornerCell {
   flex: 0 0 var(--deepcel-row-gutter);
   width: var(--deepcel-row-gutter);
-  background: linear-gradient(135deg, transparent 48%, #a6a6a6 49%, #a6a6a6 52%, transparent 53%);
+  position: relative;
+  background: var(--deepcel-header);
+}
+
+body[data-dsh-deepcel] .cornerCell::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  width: 11px;
+  height: 11px;
+  background: #929292;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
 body[data-dsh-deepcel] .columnCell {
@@ -905,11 +871,62 @@ body[data-dsh-deepcel] [data-pane='conversation'] header {
   box-shadow: none;
 }
 
-/* The ribbon and formula bar project the registered conversation chrome.
-   Its source remains mounted as the behavior owner but no longer occupies a
-   second row inside the worksheet. */
+/* Native title actions retain their anchors, focus and popup ownership in
+   the workbook title strip. Only the title and view tabs are projected. */
 body[data-dsh-deepcel] [data-deepcel-header-source] {
+  position: fixed !important;
+  inset: 0 66px auto auto !important;
+  z-index: 1000002 !important;
+  display: block !important;
+  max-width: 38vw;
+  height: 28px;
+  padding: 0 !important;
+  border: 0 !important;
+  color: #fff;
+  background: var(--deepcel-green) !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source]::after,
+body[data-dsh-deepcel] [data-deepcel-header-source] nav,
+body[data-dsh-deepcel] [data-deepcel-header-source] > [role='tablist'] {
   display: none !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] > div {
+  display: flex;
+  min-height: 28px;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [class*='titleCluster'] {
+  display: contents;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] :is([class*='headerActions'], [class*='headerUtilities']) {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-left: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  font: 11px/18px Aptos, Calibri, 'Segoe UI', sans-serif;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] button:hover,
+body[data-dsh-deepcel] [data-deepcel-header-source] button[aria-expanded='true'] {
+  background: rgb(255 255 255 / 16%);
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] button:focus-visible {
+  outline: 1px solid #fff;
+  outline-offset: -3px;
 }
 
 body[data-dsh-deepcel] [data-pane='sidebar'] > div > button {
@@ -1300,7 +1317,7 @@ body[data-dsh-deepcel] [data-phase='active'] [data-conversation-scroll][data-dee
   display: grid !important;
   grid-template-columns:
     calc(var(--deepcel-row-gutter) + var(--deepcel-chat-x, 0px))
-    repeat(12, var(--deepcel-cell-width))
+    repeat(var(--deepcel-chat-columns, 12), var(--deepcel-cell-width))
     minmax(0, 1fr);
   grid-auto-rows: var(--deepcel-row-height);
   align-content: start;
@@ -1319,7 +1336,7 @@ body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [data-
   bottom: auto !important;
   left: auto !important;
   z-index: 2 !important;
-  grid-column: 2 / span 12;
+  grid-column: 2 / span var(--deepcel-chat-columns, 12);
   grid-row: span var(--deepcel-composer-rows, 4);
   width: auto !important;
   height: auto !important;
@@ -1353,27 +1370,41 @@ body[data-dsh-deepcel] [data-phase='active'] [data-deepcel-workbook-flow] [class
 
 body[data-dsh-deepcel] [data-deepcel-message-range] {
   box-sizing: border-box;
-  grid-column: 2 / span 12;
+  grid-column: 2 / span var(--deepcel-chat-columns, 12);
   grid-row: span var(--deepcel-message-rows, 1);
   width: auto;
   min-height: 0;
+  margin: 0 !important;
   padding: 0;
   border: 0;
   background: transparent;
-  content-visibility: auto;
-  contain-intrinsic-size: auto var(--deepcel-message-height, 72px);
 }
 
-body[data-dsh-deepcel] [data-deepcel-message-range][data-deepcel-single-line]:not([data-deepcel-cellized]) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+/* Searchable folded seats remain discoverable by the host's beforematch
+   handler, but do not reserve a worksheet row while their contents are hidden. */
+body[data-dsh-deepcel] [data-deepcel-message-range][hidden='until-found'] {
+  display: block !important;
+  position: absolute;
+  height: 0;
+  content-visibility: hidden;
+  contain-intrinsic-size: 0;
 }
 
-body[data-dsh-deepcel] [data-deepcel-message-range][data-deepcel-single-line]:not([data-deepcel-cellized]) * {
-  margin-block: 0 !important;
-  line-height: var(--deepcel-row-height) !important;
+body[data-dsh-deepcel] [data-chat-flow-kind]:is([data-chat-flow-kind='system-prompt'], [data-chat-flow-kind='context'], [data-chat-flow-kind='turn-process']):not([hidden]) {
+  background: var(--deepcel-sheet);
+  outline: 1px solid var(--deepcel-grid-strong);
+  outline-offset: -1px;
+}
+
+body[data-dsh-deepcel] button[data-turn-process] {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--deepcel-row-height);
+  padding: 0 6px;
+}
+
+body[data-dsh-deepcel] button[data-turn-process] svg {
+  display: block !important;
 }
 
 body[data-dsh-deepcel] [data-deepcel-cell-container] {
@@ -1392,7 +1423,7 @@ body[data-dsh-deepcel] [data-deepcel-content-cell] {
   z-index: 2;
   display: block;
   box-sizing: border-box;
-  grid-column: 2 / span 12;
+  grid-column: 2 / span var(--deepcel-chat-columns, 12);
   grid-row: span var(--deepcel-content-cell-rows, 1);
   align-self: stretch;
   width: auto;
@@ -1444,7 +1475,7 @@ body[data-dsh-deepcel] [data-sample='bash'][data-variant='bash'][data-deepcel-co
 }
 
 body[data-dsh-deepcel] [data-sample='bash'][data-variant='bash'] + * > [data-deepcel-content-cell] {
-  grid-column: 2 / span 12;
+  grid-column: 2 / span var(--deepcel-chat-columns, 12);
 }
 
 body[data-dsh-deepcel] [data-sample='bash'][data-variant='bash'] + * > [data-terminal][data-deepcel-content-cell] {
@@ -1486,15 +1517,8 @@ body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-produced-files-ro
   line-height: var(--deepcel-row-height);
 }
 
-/* IconActions are textual worksheet commands in this skin. Their native
-   28px icon seats must grow to their aria-labels, and the tooltip needs to
-   escape the merged cell instead of being paint-clipped to an empty sliver. */
-body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'][data-deepcel-message-range] {
-  content-visibility: visible;
-  contain-intrinsic-size: none;
-}
-
-body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-time-hover-root] > [class*='actions'][data-deepcel-content-cell] {
+/* IconActions retain their labels and tooltips outside the merged cell. */
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-turn-tail][data-actions-reveal] > [class*='actions'][data-deepcel-content-cell] {
   display: flex;
   align-items: center;
   gap: 0;
@@ -1503,7 +1527,7 @@ body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-time-hover-root] 
   overflow: visible;
 }
 
-body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-time-hover-root] > [class*='actions'] > button[aria-label] {
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-turn-tail][data-actions-reveal] > [class*='actions'] > button[aria-label] {
   width: auto;
   min-width: max-content;
   height: var(--deepcel-row-height);
@@ -1512,7 +1536,7 @@ body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-time-hover-root] 
   border-radius: 0;
 }
 
-body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-time-hover-root] [role='tooltip'] {
+body[data-dsh-deepcel] [data-chat-flow-kind='turn-tail'] [data-turn-tail] [role='tooltip'] {
   z-index: 1000003;
   width: max-content;
   max-width: min(420px, 50vw);
@@ -1765,21 +1789,115 @@ body[data-dsh-deepcel] [data-phase='hero'] [class*='previewBadge'] {
   line-height: 23px;
 }
 
-/* A trajectory record's content column is one horizontally merged worksheet
-   range. Its opaque cell fill hides the decorative vertical grid lines under
-   continuous text while the native table keeps row selection and semantics. */
-body[data-dsh-deepcel] tr[data-trajectory-row-key] > td:last-child {
+/* The trajectory virtualizer owns 30px records and its own scrollport.
+   Record gutters therefore belong to those rows, not the chat's 24px canvas. */
+body[data-dsh-deepcel]:has([data-trajectory-scroll]) :is(.rowChrome, .worksheetSelection) {
+  visibility: hidden;
+}
+
+body[data-dsh-deepcel] [data-slot='conversation.view'] > :has([data-trajectory-scroll]) {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  background: var(--deepcel-sheet) !important;
+}
+
+body[data-dsh-deepcel] [data-trajectory-scroll] {
+  box-sizing: border-box;
+  padding-left: var(--deepcel-row-gutter);
+  background-color: var(--deepcel-sheet);
+  background-image: linear-gradient(to right, var(--deepcel-grid) 1px, transparent 1px);
+  background-size: var(--deepcel-cell-width) 100%;
+  background-position-x: var(--deepcel-row-gutter);
+}
+
+body[data-dsh-deepcel] [data-trajectory-scroll] > table {
+  border-spacing: 0;
+  background: var(--deepcel-sheet);
+  font-family: Aptos, Calibri, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+body[data-dsh-deepcel] [data-trajectory-scroll] > table col:first-child {
+  width: calc(2 * var(--deepcel-cell-width));
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key] > td:first-child {
+  position: relative;
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key]::after {
+  content: none;
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key]:not([data-request-only]) > td:first-child::after {
+  content: attr(data-deepcel-trajectory-row);
+  position: absolute;
+  inset: 0 auto 0 calc(-1 * var(--deepcel-row-gutter));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  width: var(--deepcel-row-gutter);
+  padding-right: 7px;
+  border-right: 1px solid var(--deepcel-grid-strong);
+  border-bottom: 1px solid var(--deepcel-grid);
+  color: var(--deepcel-muted);
+  background: var(--deepcel-header);
+  font: 11px/18px Aptos, Calibri, sans-serif;
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key] > td {
+  vertical-align: middle;
+  border-bottom: 1px solid var(--deepcel-grid);
   background: var(--deepcel-sheet);
 }
 
-body[data-dsh-deepcel] tr[data-trajectory-row-key]:hover > td:last-child {
+body[data-dsh-deepcel] tr[data-trajectory-row-key] > td:first-child {
+  padding: 0 !important;
+  border-right: 1px solid var(--deepcel-grid);
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key] [class*='eventInner'] {
+  justify-content: center;
+  width: var(--deepcel-cell-width);
+  margin-left: var(--deepcel-cell-width);
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key] [class*='kindSlot'] {
+  width: auto;
+  padding: 0;
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key] [class*='kindTagIcon'] svg {
+  display: block !important;
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key] > td:last-child {
+  position: relative;
+  z-index: 1;
+  padding-inline: 8px !important;
+  background: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key] [class*='contentText'] {
+  line-height: 18px;
+}
+
+body[data-dsh-deepcel] tr[data-trajectory-row-key]:hover > td {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-body[data-dsh-deepcel] tr[data-trajectory-row-key][data-selected='true'] > td:last-child {
-  background: var(--deepcel-highlight-solid);
+body[data-dsh-deepcel] tr[data-trajectory-row-key][aria-selected='true'] > td,
+body[data-dsh-deepcel] tr[data-trajectory-row-key][aria-selected='true'] > td:first-child::after {
+  background: var(--deepcel-green-soft);
+  color: var(--deepcel-green-dark);
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] tr[data-trajectory-row-key][aria-selected='true'] > td,
+body[data-dsh-deepcel][data-ds-dark-theme] tr[data-trajectory-row-key][aria-selected='true'] > td:first-child::after {
+  background: #293b31;
+  color: var(--deepcel-ink);
 }
 
 body[data-dsh-deepcel] [data-phase='hero'] [class*='heroWorkspaceRow'] {
@@ -1983,7 +2101,7 @@ body[data-dsh-deepcel] :is([role='menu'], [role='listbox'], [data-radix-popper-c
 body[data-dsh-deepcel] :is([class*='_overlay'], [class*='_root']):has(> [role='dialog']) {
   position: fixed !important;
   inset: var(--deepcel-ribbon-height) 0 28px var(--deepcel-sheet-origin) !important;
-  z-index: 999998 !important;
+  z-index: 1000003 !important;
   align-items: flex-start !important;
   justify-content: flex-start !important;
   box-sizing: border-box;
@@ -2004,10 +2122,32 @@ body[data-dsh-deepcel] [role='dialog'] {
   box-shadow: none !important;
 }
 
-body[data-dsh-deepcel] [class*='_panel'][role='dialog'] {
+body[data-dsh-deepcel] [class*='_panel'][role='dialog']:not(:has(> [data-turn-usage-details], > [data-turn-time-details])) {
   width: min(720px, calc(100vw - var(--deepcel-sheet-origin) - 120px)) !important;
   height: min(672px, calc(100vh - var(--deepcel-ribbon-height) - 76px)) !important;
   max-width: none !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [class*='headerActions'] span {
+  color: #fff;
+}
+
+body[data-dsh-deepcel] [class*='sidebarCol']:has([role='dialog']) {
+  z-index: 1000003;
+}
+
+body[data-dsh-deepcel] [role='dialog']:has(> [data-turn-usage-details], > [data-turn-time-details]) {
+  z-index: 1000004;
+  border-radius: 0;
+}
+
+body[data-dsh-deepcel] [role='dialog'] [class*='arrows'] > button > svg {
+  display: block !important;
+  opacity: 1 !important;
+}
+
+body[data-dsh-deepcel] [role='dialog'] [class*='arrows'] > button::after {
+  content: none !important;
 }
 
 body[data-dsh-deepcel] [class*='_panel'][role='dialog'] [class*='_nav'] {
@@ -2037,7 +2177,8 @@ body[data-dsh-deepcel] [class*='_dialog'][role='dialog'] {
 
 body[data-dsh-deepcel] [class*='_dialog'][role='dialog'] [class*='_header'] {
   box-sizing: border-box;
-  height: 48px;
+  min-height: 48px;
+  height: auto;
   padding: 12px 10px !important;
   border-bottom: 1px solid var(--deepcel-grid-strong);
 }
@@ -2334,7 +2475,7 @@ body[data-dsh-deepcel]
     min-width: 0;
   }
 
-  body[data-dsh-deepcel] .toolCell:nth-last-child(-n + 3),
+  body[data-dsh-deepcel] .toolCell:not(button):nth-last-child(-n + 3),
   body[data-dsh-deepcel] .columnCell:nth-last-child(-n + 4),
   body[data-dsh-deepcel] .statusCell {
     display: none;
@@ -2345,20 +2486,16 @@ body[data-dsh-deepcel]
   }
 }
 
-/* Final formula-input authority: these selectors intentionally follow the
-   legacy composer cell rules while the Deepcel interaction shell is active. */
+/* Keep the native Lexical tree and its scroll owner together in the formula
+   bar; decorator portals and selection continue to belong to the editor. */
 body[data-dsh-deepcel] :global(#root) [data-deepcel-composer-range] {
   min-height: 0 !important;
-  height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
   overflow: visible !important;
 }
 
-/* The fixed textarea cannot escape a low-z sticky composer seat on its own.
-   Raise the exact native owner above workbook chrome while leaving its empty
-   layout box transparent to pointer hit testing. */
 body[data-dsh-deepcel] :global(#root) [data-phase] [data-deepcel-formula-owner] {
   position: relative !important;
   z-index: 1000002 !important;
@@ -2368,51 +2505,330 @@ body[data-dsh-deepcel] :global(#root) [data-phase] [data-deepcel-formula-owner] 
 
 body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] {
   position: fixed !important;
-  inset: 0 auto auto 0 !important;
+  inset: 89px 0 auto 106px !important;
   z-index: 1000002 !important;
   display: block !important;
-  width: 0 !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  max-width: none !important;
   min-width: 0 !important;
-  height: 0 !important;
+  height: var(--deepcel-formula-height) !important;
   min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
   border: 0 !important;
-  background: transparent !important;
+  border-bottom: 1px solid var(--deepcel-grid-strong) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-sheet) !important;
   box-shadow: none !important;
+  pointer-events: auto !important;
 }
 
 body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] * {
   visibility: hidden !important;
 }
 
-body[data-dsh-deepcel] :global(#root) [data-phase] textarea[data-deepcel-formula-input] {
-  position: fixed !important;
-  inset: 89px 0 auto 106px !important;
-  z-index: 1000002 !important;
-  display: block !important;
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] [data-input-scroll] {
+  position: relative !important;
   box-sizing: border-box !important;
-  width: auto !important;
-  height: var(--deepcel-formula-height) !important;
-  min-height: var(--deepcel-formula-height) !important;
-  max-height: var(--deepcel-formula-height) !important;
+  width: calc(100% - 96px) !important;
+  height: var(--deepcel-editor-height, 28px) !important;
+  max-height: var(--deepcel-editor-height, 28px) !important;
   margin: 0 !important;
-  padding: 5px 10px !important;
+  padding: 0 !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
+  overscroll-behavior: contain;
+  visibility: visible !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-input-scroll] > div {
+  position: relative !important;
+  min-height: 28px !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-deepcel-formula-input] {
+  position: relative !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 28px !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 5px 10px !important;
+  overflow: visible !important;
   visibility: visible !important;
   border: 0 !important;
-  border-bottom: 1px solid var(--deepcel-grid-strong) !important;
   background: var(--deepcel-sheet) !important;
   color: var(--deepcel-ink) !important;
-  -webkit-text-fill-color: var(--deepcel-ink) !important;
+  -webkit-text-fill-color: currentColor !important;
   caret-color: var(--deepcel-selection) !important;
   font: 12px/18px Consolas, monospace !important;
-  resize: none !important;
+  white-space: pre-wrap !important;
   pointer-events: auto !important;
-  cursor: text !important;
+  cursor: text;
   opacity: 1 !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-deepcel-formula-input] *,
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-placeholder] {
+  visibility: visible !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-placeholder] {
+  inset: 5px 10px auto !important;
+  color: var(--deepcel-muted) !important;
+  font: 12px/18px Consolas, monospace !important;
+  pointer-events: none !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-deepcel-formula-input] p {
+  margin: 0 !important;
+}
+
+/* Commands and primary actions stay native at the right end of the formula
+   row; the existing Manage ribbon owns the model and permission projections. */
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] > [class*='row'] {
+  position: absolute !important;
+  inset: 0 0 auto auto !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+  width: 96px !important;
+  height: 28px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border-left: 1px solid var(--deepcel-grid-strong) !important;
+  background: var(--deepcel-header) !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] :is([class*='tools'], [class*='trailing']) {
+  display: flex !important;
+  flex: 0 1 auto !important;
+  gap: 0 !important;
+  min-width: 0 !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] [class*='modes'],
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] [class*='trailing'] > :not(button) {
+  display: none !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] :is(button[aria-haspopup='listbox'], [class*='trailing'] > button),
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] :is(button[aria-haspopup='listbox'], [class*='trailing'] > button) * {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] :is(button[aria-haspopup='listbox'], [class*='trailing'] > button) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 26px !important;
+  min-width: 0 !important;
+  padding: 4px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: var(--deepcel-selection) !important;
+  background: transparent !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] :is(button[aria-haspopup='listbox'], [class*='trailing'] > button)::after {
+  content: none !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] :is(button[aria-haspopup='listbox'], [class*='trailing'] > button):disabled {
+  opacity: .4 !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] :is(button[aria-haspopup='listbox'], [class*='trailing'] > button):focus-visible {
+  outline: 2px solid var(--deepcel-selection) !important;
+  outline-offset: -2px !important;
+}
+
+/* The top-mounted formula bar opens command popups down into the worksheet. */
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] > [class*='overlayAnchor'] {
+  inset: 100% 0 auto !important;
+  visibility: visible !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] > [class*='overlayAnchor'] * {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] [data-slot='conversation.input.overlay'] > * {
+  top: 4px !important;
+  bottom: auto !important;
+  width: min(560px, 100%) !important;
+  max-height: min(360px, calc(100dvh - var(--deepcel-ribbon-height) - 48px)) !important;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-top: 3px solid var(--deepcel-selection) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-sheet) !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] *,
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [role='status'] {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] > [class*='rail'] {
+  position: absolute;
+  inset: var(--deepcel-editor-height, 28px) 0 auto;
+  box-sizing: border-box;
+  height: 72px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--deepcel-grid);
+  background: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel] :global(#root) [data-composer-card] [data-slot='conversation.input.attachments'] button {
+  border-radius: 0;
+}
+
+/* RC1 docks are worksheet records above the transcript footer. Their native
+   controls remain in normal flow even though the editor lives in the ribbon. */
+body[data-dsh-deepcel] :is([data-goal-bar], [data-queue-dock], [data-approval-key]) {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 0 var(--deepcel-row-height) !important;
+  padding: 0 !important;
+  border: 1px solid var(--deepcel-grid-strong);
+  border-left: 3px solid var(--deepcel-selection);
+  border-radius: 0 !important;
+  color: var(--deepcel-ink);
+  background: var(--deepcel-sheet);
+  pointer-events: auto !important;
+}
+
+body[data-dsh-deepcel] :is([data-goal-bar], [data-queue-dock]) > div {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 6px 8px !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-header) !important;
+}
+
+body[data-dsh-deepcel] [data-queue-dock] li {
+  min-height: 24px;
+  border-bottom: 1px solid var(--deepcel-grid);
+  border-radius: 0;
+  background: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel] :is([data-goal-bar], [data-queue-dock], [data-approval-key]) :is(button, input, textarea) {
+  border-radius: 0 !important;
+  pointer-events: auto !important;
+}
+
+body[data-dsh-deepcel] :is([data-goal-bar], [data-queue-dock]) button[aria-label] {
+  width: auto;
+  min-width: 28px;
+  padding-inline: 7px;
+}
+
+body[data-dsh-deepcel] :is([data-goal-bar], [data-queue-dock]) button[aria-label]::after {
+  max-width: none !important;
+}
+
+body[data-dsh-deepcel] :is([data-goal-bar], [data-queue-dock]) button:is(:hover, :focus-visible),
+body[data-dsh-deepcel] :is([data-goal-bar], [data-queue-dock]) button[aria-expanded='true'] {
+  color: var(--deepcel-selection);
+  background: var(--deepcel-green-soft);
+}
+
+body[data-dsh-deepcel][data-ds-dark-theme] :is([data-goal-bar], [data-queue-dock]) button:is(:hover, :focus-visible),
+body[data-dsh-deepcel][data-ds-dark-theme] :is([data-goal-bar], [data-queue-dock]) button[aria-expanded='true'] {
+  background: #293b31;
+}
+
+/* The zero-height native rail stays out of the worksheet's implicit rows. */
+body[data-dsh-deepcel] [data-phase='active'] :has(+ [data-chat-flow]):has(> nav) {
+  position: fixed !important;
+  inset: var(--deepcel-ribbon-height) 12px 28px auto !important;
+  z-index: 8;
+  width: 28px;
+  height: auto !important;
+  pointer-events: none;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] :has(+ [data-chat-flow]) > nav {
+  top: 50%;
+  right: 0;
+  border-inline: 1px solid var(--deepcel-grid);
+  background: var(--deepcel-header);
+}
+
+body[data-dsh-deepcel] [data-phase='active'] :has(+ [data-chat-flow]) > nav button[aria-label] {
+  border-radius: 0;
+}
+
+body[data-dsh-deepcel] [data-phase='active'] :has(+ [data-chat-flow]) > nav button[aria-label]::before {
+  height: 4px;
+  border-radius: 0;
+  background: var(--deepcel-grid-strong);
+}
+
+body[data-dsh-deepcel] [data-phase='active'] :has(+ [data-chat-flow]) > nav button:is([aria-current='true'], :focus-visible)::before {
+  background: var(--deepcel-selection);
+}
+
+body[data-dsh-deepcel] [data-phase='active'] :has(+ [data-chat-flow]) > nav button:focus-visible {
+  outline: 1px solid var(--deepcel-selection);
+}
+
+body[data-dsh-deepcel] [data-phase='active'] :has(+ [data-chat-flow]) > nav [role='tooltip'] {
+  border: 1px solid var(--deepcel-grid-strong);
+  border-left: 3px solid var(--deepcel-selection);
+  border-radius: 0;
+  color: var(--deepcel-ink);
+  background: var(--deepcel-sheet);
+}
+
+body[data-dsh-deepcel] [data-width-handle]::after,
+body[data-dsh-deepcel] [data-side='sidebar']::after,
+body[data-dsh-deepcel] [data-side='details']::after {
+  border-radius: 0;
+  background: var(--deepcel-selection);
+}
+
+/* Schedule catalogs are native body portals with list semantics, unlike the
+   menu primitive; the metadata row identifies that owner without locale text. */
+body[data-dsh-deepcel] > ul[aria-label][style]:has(> li > [class*='metadata']) {
+  z-index: 1000004;
+  border: 1px solid var(--deepcel-grid-strong);
+  border-top: 3px solid var(--deepcel-selection);
+  border-radius: 0;
+  background: var(--deepcel-sheet);
+  box-shadow: 2px 2px 0 rgb(0 0 0 / 12%);
+}
+
+body[data-dsh-deepcel] > ul[aria-label][style]:has(> li > [class*='metadata']) > li {
+  border-bottom: 1px solid var(--deepcel-grid);
+  border-radius: 0;
+}
+
+body[data-dsh-deepcel] [class*='sidebarCol'] :is(button[data-phase='disconnected'], button[data-phase='connecting'], [role='status'][aria-label]) {
+  border: 1px solid var(--deepcel-grid-strong);
+  border-radius: 0;
+  background: var(--deepcel-header) !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] :is(button[aria-haspopup='listbox'], [class*='trailing'] > button) svg {
+  display: block !important;
+  width: 14px !important;
+  height: 14px !important;
+  opacity: 1 !important;
+}
+
+body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] [class*='trailing'] > button {
+  transform: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

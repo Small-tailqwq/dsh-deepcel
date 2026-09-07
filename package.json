@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "main": "lib/index.js",
+  "main": "./lib/index.js",
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
@@ -17,30 +17,46 @@
     },
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-api-session-controller",
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-layout"
       ],
       "platform": "web"
     }
   },
+  "dshClient": {
+    "inject": [
+      "@deepseek-ai/dsh-api-session-controller",
+      "@deepseek-ai/dsh-client-locale",
+      "@deepseek-ai/dsh-client-ui-layout"
+    ],
+    "platform": "web"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "watch": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
   "license": "BSD-3-Clause",
   "peerDependencies": {
-    "@deepseek-ai/dsh-client-runtime": "*",
-    "@deepseek-ai/dsh-client-locale": "*",
-    "@deepseek-ai/dsh-client-ui-layout": "*",
-    "@deepseek-ai/cordis": "^4.0.1-rc.1"
+    "@deepseek-ai/cordis": "^4.0.2"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "jsdom": "29.1.1",
+    "lightningcss": "^1.32.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
   },
   "files": [
-    "lib/index.js",
-    "lib/client.js",
+    "lib",
     "cordis.patch.yml",
     "skin.json",
     "preview",
-    "src",
-    "tests",
     "LICENSE",
-    "NOTICE",
+    "NOTICE.md",
     "README.md"
   ]
 }

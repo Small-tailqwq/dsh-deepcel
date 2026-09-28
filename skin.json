@@ -4,7 +4,8 @@
   "nameEn": "Deepcel Workbook",
   "author": "Small-tailqwq",
   "tagline": "单元格界面 · 合并输入区 · 工作簿功能区",
-  "description": "一款模仿 excel 的 dsh 皮肤",
+  "taglineEn": "Cell grid · merged formula bar · workbook ribbon",
+  "description": "把 DSH 排成一张电子表格的工作簿皮肤：功能区、函数栏、单元格网格与工作簿标签。",
   "tags": [
     "deepcel",
     "spreadsheet",
@@ -14,7 +15,7 @@
   ],
   "accent": "#217346",
   "bodyAttr": "data-dsh-deepcel",
-  "package": "@dsh-external/dsh-client-ui-skin-deepcel",
+  "package": "@smalltailqwq/dsh-client-ui-skin-deepcel",
   "wiring": {
     "id": "ui-skin-deepcel",
     "bundleWired": false
@@ -24,5 +25,5 @@
     "dark": "preview/dark.webp"
   },
   "order": 6,
-  "dshCompatibility": "0.1.2rc1"
+  "dshCompatibility": "0.1.7rc2"
 }

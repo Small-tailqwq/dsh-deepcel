@@ -9,15 +9,14 @@ import css from './skin.module.css'
 
 const SKIN_TITLE = 'Workbook Grid · DeepSeek Harness'
 
+/* Every ribbon tab owns real commands: File creates and configures, Home
+   holds the run options used before each message, View switches the sheet
+   view and the side panes. Decorative tabs without commands are not shown. */
 const RIBBON_TABS = [
   { id: 'file', label: 'File' },
   { id: 'home', label: 'Home' },
-  { id: 'manage', label: 'Manage' },
-  { id: 'data', label: 'Data' },
-  { id: 'review', label: 'Review' },
   { id: 'view', label: 'View' },
 ] as const
-const TOOL_CELLS = ['Filter', 'Sort', 'Merge', 'Format'] as const
 type RibbonTabId = typeof RIBBON_TABS[number]['id']
 type ChoiceKind = 'workspace' | 'preset' | 'permission' | 'model' | 'thinking'
 const CELL_WIDTH = 60
@@ -35,6 +34,23 @@ const CONTENT_CELL_SELECTOR = [
   '.md-code-block', '.katex-display', '[class*="tableScroll"]', 'img',
   '[data-terminal]', '[data-variant="think"]', '[class*="actions"]', '[class*="stopped"]',
 ].join(', ')
+
+/* DSH 0.1.7 folds a turn's process steps into group roots that sit directly
+   in the transcript flow; their members live in a nested flow inside the
+   group body. Only top-level records own worksheet ranges. */
+const PROCESS_GROUP_SELECTOR = '[data-chat-flow] > [data-step-process]'
+const RECORD_SELECTOR = `[data-chat-flow-kind], ${PROCESS_GROUP_SELECTOR}`
+
+/** The top-level worksheet record containing an element, if any. */
+function recordOf(element: Element | null | undefined): HTMLElement | null {
+  const group = element?.closest<HTMLElement>('[data-step-process]')
+  if (group?.parentElement?.closest('[data-step-process]') === null) return group
+  return element?.closest<HTMLElement>('[data-chat-flow-kind]') ?? null
+}
+
+function isTopLevelRecord(element: HTMLElement): boolean {
+  return element.parentElement?.closest('[data-step-process]') === null
+}
 
 function currentRibbonHeight(): number {
   const value = Number.parseFloat(getComputedStyle(document.body).getPropertyValue('--deepcel-ribbon-height'))
@@ -60,6 +76,8 @@ interface LocalePort {
 
 interface LayoutPort {
   toggleSidebar(): void
+  /** DSH 0.1.7: select a global main panel; null shows the current Conversation. */
+  selectPanel?(panelId: string | null): void
 }
 
 interface SessionsPort {
@@ -69,11 +87,13 @@ interface SessionsPort {
 
 interface ShellLabels {
   readonly file: string
-  readonly conversation: string
-  readonly manage: string
+  readonly home: string
+  readonly view: string
   readonly chat: string
+  readonly sidebar: string
   readonly sidebarShow: string
   readonly sidebarHide: string
+  readonly rightbar: string
   readonly newSession: string
   readonly newWorkspace: string
   readonly newWorkbook: string
@@ -85,8 +105,17 @@ interface ShellLabels {
   readonly permission: string
   readonly model: string
   readonly thinking: string
-  readonly confirm: string
-  readonly cancel: string
+  readonly groupNew: string
+  readonly groupOptions: string
+  readonly groupTarget: string
+  readonly groupRun: string
+  readonly groupSheets: string
+  readonly groupWindow: string
+  readonly empty: string
+  readonly ready: string
+  readonly quickAccess: string
+  readonly addins: string
+  readonly closeAddins: string
 }
 
 interface WorkbookControls {
@@ -94,9 +123,13 @@ interface WorkbookControls {
   readonly tools: HTMLDivElement
   readonly formulaCell: HTMLElement
   readonly titleCell: HTMLElement
+  readonly quickNewSession: HTMLButtonElement
+  readonly quickSidebar: HTMLButtonElement
   readonly newSession: HTMLButtonElement
   readonly newWorkspace: HTMLButtonElement
   readonly settings: HTMLButtonElement
+  readonly sidebar: HTMLButtonElement
+  readonly rightbar: HTMLButtonElement
   readonly workspace: HTMLButtonElement
   readonly preset: HTMLButtonElement
   readonly permission: HTMLButtonElement
@@ -150,21 +183,27 @@ function makeControl(className: keyof typeof css, action: string): HTMLButtonEle
 function labelsFor(snapshot: LocaleSnapshot): ShellLabels {
   if (snapshot.active === 'en') {
     return {
-      file: 'File', conversation: 'Conversation', chat: 'Chat', sidebarShow: 'Show sidebar', sidebarHide: 'Hide sidebar',
-      manage: 'Manage',
+      file: 'File', home: 'Home', view: 'View', chat: 'Chat',
+      sidebar: 'Sidebar', sidebarShow: 'Show sidebar', sidebarHide: 'Hide sidebar', rightbar: 'Side panel',
       newSession: 'New session', newWorkspace: 'New workspace', settings: 'Settings',
       newWorkbook: 'New workbook', addWorkbook: '+ Workbook', closeWorkbook: 'Close workbook',
       workspace: 'Workspace', preset: 'Agent preset',
-      permission: 'Permission', model: 'Model', thinking: 'Thinking', confirm: 'Confirm', cancel: 'Cancel',
+      permission: 'Permission', model: 'Model', thinking: 'Thinking',
+      groupNew: 'New', groupOptions: 'Options', groupTarget: 'Next session', groupRun: 'Run',
+      groupSheets: 'Sheets', groupWindow: 'Window', empty: 'No choices available', ready: 'Ready',
+      quickAccess: 'Quick access', addins: 'Add-ins', closeAddins: 'Close add-ins',
     }
   }
   return {
-    file: '文件', conversation: '会话', chat: '对话', sidebarShow: '打开侧边栏', sidebarHide: '收起侧边栏',
-    manage: '管理',
+    file: '文件', home: '开始', view: '视图', chat: '对话',
+    sidebar: '侧边栏', sidebarShow: '打开侧边栏', sidebarHide: '收起侧边栏', rightbar: '右侧栏',
     newSession: '新会话', newWorkspace: '新工作区', settings: '设置',
     newWorkbook: '新建工作簿', addWorkbook: '+ 工作簿', closeWorkbook: '关闭工作簿',
     workspace: '工作区', preset: 'Agent 预设',
-    permission: '权限', model: '模型', thinking: '思考', confirm: '确认', cancel: '取消',
+    permission: '权限', model: '模型', thinking: '思考',
+    groupNew: '新建', groupOptions: '选项', groupTarget: '新会话', groupRun: '运行',
+    groupSheets: '工作表', groupWindow: '窗口', empty: '暂无可选项', ready: '就绪',
+    quickAccess: '快速访问', addins: '加载项', closeAddins: '关闭加载项',
   }
 }
 
@@ -196,10 +235,49 @@ function toggleNativeSettings(): void {
     else clickNativeButton(['设置', 'Settings'], ['设置', 'Settings'])
     return
   }
-  const dialog = document.querySelector<HTMLElement>("[role='dialog']")
+  // DSH 0.1.7 portals the settings panel to body and tags it as the settings
+  // shortcut modal; its close button carries only visually hidden text.
+  const dialog = document.querySelector<HTMLElement>("[role='dialog'][data-shortcut-modal='settings']")
   const close = [...dialog?.querySelectorAll<HTMLButtonElement>('button') ?? []]
     .find((button) => ['关闭', 'Close'].includes(button.textContent?.trim() ?? ''))
   close?.click()
+}
+
+/** The right panel is expanded from the header corner and collapsed from its own strip. */
+function nativeRightbarToggle(): HTMLButtonElement | undefined {
+  return document.querySelector<HTMLButtonElement>('#root [data-sidebar-right-expand]')
+    ?? document.querySelector<HTMLButtonElement>('#root [data-sidebar-right-open] [data-sidebar-right-toggle]')
+    ?? undefined
+}
+
+function rightbarOpen(): boolean {
+  return document.querySelector('#root [data-sidebar-right-panel][data-sidebar-right-open]') !== null
+}
+
+/** The Plugins page is the global main panel that DSH 0.1.7 marks as the plugin panel. */
+function nativeAddinsPanel(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('#root section[data-plugin-panel]')
+}
+
+/**
+ * Skin-owned caption for the Plugins page. The page itself stays the host's
+ * main panel; CSS lifts it into a floating secondary window over the sheet and
+ * this bar supplies the window title and its close command.
+ */
+function createAddinsCaption(): { caption: HTMLDivElement, title: HTMLSpanElement, close: HTMLButtonElement } {
+  const caption = document.createElement('div')
+  caption.className = cls('addinsCaption')
+  caption.dataset.skinChrome = 'addins'
+  caption.hidden = true
+  const title = makeCell('addinsTitle', 'Add-ins')
+  const close = makeControl('addinsClose', 'close-addins')
+  close.textContent = '×'
+  caption.append(title, close)
+  return { caption, title, close }
+}
+
+function nativePanelButtons(): HTMLButtonElement[] {
+  return [...document.querySelectorAll<HTMLButtonElement>("#root [class*='sidebarCol'] nav[class*='panelList'] > button")]
 }
 
 function activeComposer(): HTMLElement | null {
@@ -243,6 +321,19 @@ function modelLabels(): { model: string, thinking: string } {
   return { model: labels[0] ?? trigger?.title ?? '', thinking: labels[1] ?? '' }
 }
 
+/** The permission trigger's visible label, without its accessible sentence. */
+function permissionLabel(trigger: HTMLButtonElement | undefined): string {
+  return trigger?.querySelector<HTMLElement>("[class*='triggerLabel']")?.textContent?.trim()
+    || trigger?.textContent?.trim()
+    || ''
+}
+
+function currentChoice(kind: ChoiceKind): string {
+  if (kind === 'workspace' || kind === 'preset') return nativeHeroChoiceTrigger(kind)?.textContent?.trim() ?? ''
+  if (kind === 'permission') return permissionLabel(nativePermissionTrigger())
+  return modelLabels()[kind]
+}
+
 function afterPaint(): Promise<void> {
   return new Promise(resolve => { requestAnimationFrame(() => { requestAnimationFrame(() => { resolve() }) }) })
 }
@@ -268,11 +359,12 @@ async function heroChoices(kind: 'workspace' | 'preset'): Promise<string[]> {
   trigger.click()
   await afterPaint()
   const menu = controlledHeroChoiceMenu(trigger)
+  // Adding a workspace is a File command, not a value of this choice.
   const excluded = new Set(['Add workspace', '添加工作区'])
   const choices = [...menu?.querySelectorAll<HTMLButtonElement>("[role='menuitem'], [role='menuitemradio']") ?? []]
     .filter(button => !button.disabled)
     .map(menuChoiceLabel)
-    .filter(label => label !== '' && !excluded.has(label))
+    .filter(label => label !== '' && !excluded.has(label.replace(/(?:…|\.{3})$/, '')))
   trigger.click()
   await afterPaint()
   delete document.body.dataset.deepcelModelProbing
@@ -384,11 +476,6 @@ function concealNativeEntrypoints(): void {
   }
   for (const composer of document.querySelectorAll<HTMLElement>('[data-composer-card]')) {
     composer.dataset.deepcelMergedInput = ''
-    const inputRoot = composer.parentElement
-    const footer = inputRoot?.lastElementChild
-    if (footer instanceof HTMLElement && footer !== composer && footer.textContent?.trim() !== '') {
-      footer.dataset.deepcelStatsSource = ''
-    }
   }
   const heroRow = nativeHeroChoiceTriggers().row
   for (const source of document.querySelectorAll<HTMLElement>('[data-deepcel-hero-choice-source]')) {
@@ -493,8 +580,13 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
     // height must not switch the layout or typography used by the next read.
     const roots = [...message.children].flatMap(child =>
       getComputedStyle(child).display === 'contents' ? [...child.children] : [child])
-    const contentHeight = Math.max(0, ...roots.map(child =>
-      child instanceof HTMLElement ? Math.max(child.scrollHeight, child.getBoundingClientRect().height) : 0))
+    // A process group stacks its heading and body; other records overlay one root.
+    const stacked = message.matches('[data-step-process]')
+    const heights = roots.map(child =>
+      child instanceof HTMLElement ? Math.max(stacked ? 0 : child.scrollHeight, child.getBoundingClientRect().height) : 0)
+    const contentHeight = stacked
+      ? heights.reduce((sum, height) => sum + height, 0)
+      : Math.max(0, ...heights)
     const height = Math.max(ROW_HEIGHT, Math.ceil(contentHeight / ROW_HEIGHT) * ROW_HEIGHT)
     const value = `${height}px`
     if (message.style.getPropertyValue('--deepcel-message-height') !== value) {
@@ -531,6 +623,8 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
   const syncMessageCells = (message: HTMLElement): void => {
     clearMessageCells(message)
     if (message.hasAttribute('hidden')) return
+    // A process group is one merged range; its disclosure rows keep their own layout.
+    if (message.matches('[data-step-process]')) return
     if (message.matches("[data-chat-flow-kind='system-prompt'], [data-chat-flow-kind='context']")) return
     if (message.querySelector("[class*='userRow']") !== null) return
 
@@ -565,25 +659,47 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
     sizeMessage(message)
   }
 
+  // A record stretched over whole grid rows keeps its box when its content
+  // grows, so its content roots are observed as well and mapped back.
+  const observedRecords = new Map<Element, HTMLElement>()
   const messageResizeObserver = typeof ResizeObserver === 'undefined'
     ? undefined
     : new ResizeObserver(entries => {
+        const records = new Set<HTMLElement>()
         for (const entry of entries) {
-          if (entry.target instanceof HTMLElement) sizeMessage(entry.target)
+          const record = observedRecords.get(entry.target)
+          if (record !== undefined) records.add(record)
         }
+        for (const record of records) sizeMessage(record)
       })
+  const observeRecord = (message: HTMLElement): void => {
+    observedRecords.set(message, message)
+    messageResizeObserver?.observe(message)
+    if (!message.matches('[data-step-process]')) return
+    for (const child of message.children) {
+      observedRecords.set(child, message)
+      messageResizeObserver?.observe(child)
+    }
+  }
+  const unobserveRecord = (message: HTMLElement): void => {
+    for (const [target, record] of observedRecords) {
+      if (record !== message) continue
+      messageResizeObserver?.unobserve(target)
+      observedRecords.delete(target)
+    }
+  }
 
   const syncMessages = (): void => {
-    const live = new Set(document.querySelectorAll<HTMLElement>('[data-chat-flow-kind]'))
+    const live = new Set([...document.querySelectorAll<HTMLElement>(RECORD_SELECTOR)].filter(isTopLevelRecord))
     for (const message of live) {
       if (messageElements.has(message)) continue
       syncMessageCells(message)
       sizeMessage(message)
-      messageResizeObserver?.observe(message)
+      observeRecord(message)
     }
     for (const message of messageElements) {
       if (live.has(message)) continue
-      messageResizeObserver?.unobserve(message)
+      unobserveRecord(message)
       clearMessageCells(message)
       delete message.dataset.deepcelMessageRange
       message.style.removeProperty('--deepcel-message-height')
@@ -813,13 +929,13 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
     if (event.clientX < origin || event.clientY < ribbonHeight || event.clientY >= window.innerHeight - STATUS_HEIGHT) return
 
     const heroHeadline = event.target.closest<HTMLElement>(
-      "[data-phase='hero'] [class*='headline']:has(> [class*='headlineText'])",
+      "[data-phase='hero'] [class*='headline']:has(> [class*='titleGroup'])",
     )
     const heroHeadlineRect = heroHeadline?.getBoundingClientRect()
     if (heroHeadline !== null && heroHeadline !== undefined
       && heroHeadlineRect !== undefined && heroHeadlineRect.width > 0 && heroHeadlineRect.height > 0) {
       const relativeX = event.clientX - heroHeadlineRect.left
-      const title = heroHeadline.querySelector<HTMLElement>("[class*='headlineText']")
+      const title = heroHeadline.querySelector<HTMLElement>("[class*='titleGroup'] > span:first-child")
       const preview = heroHeadline.querySelector<HTMLElement>("[class*='previewBadge']")
       const segment = relativeX < CELL_WIDTH
         ? { start: heroHeadlineRect.left, end: heroHeadlineRect.left + CELL_WIDTH, element: heroHeadline, kind: 'formula' }
@@ -863,13 +979,11 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
       if (record.type === 'attributes' && record.attributeName !== 'aria-rowindex' && record.attributeName !== 'hidden'
         && target !== scrollport?.closest("[data-phase='active']")) continue
       changed = true
-      const message = target?.closest<HTMLElement>('[data-chat-flow-kind]')
-      if (message !== null && message !== undefined) dirtyMessages.add(message)
+      const message = recordOf(target)
+      if (message !== null) dirtyMessages.add(message)
       for (const node of record.addedNodes) {
         if (!(node instanceof HTMLElement)) continue
-        const addedMessage = node.matches('[data-chat-flow-kind]')
-          ? node
-          : node.closest<HTMLElement>('[data-chat-flow-kind]')
+        const addedMessage = node.matches(RECORD_SELECTOR) && isTopLevelRecord(node) ? node : recordOf(node)
         if (addedMessage !== null) dirtyMessages.add(addedMessage)
       }
     }
@@ -894,6 +1008,7 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
       scrollport?.removeEventListener('scroll', onScroll)
       if (reconcileFrame !== undefined) cancelAnimationFrame(reconcileFrame)
       messageResizeObserver?.disconnect()
+      observedRecords.clear()
       composerResizeObserver?.disconnect()
       for (const message of messageElements) {
         clearMessageCells(message)
@@ -936,22 +1051,24 @@ function createWorkbookChrome(): {
 
   const titleRow = document.createElement('div')
   titleRow.className = cls('titleRow')
+  const quickAccess = document.createElement('div')
+  quickAccess.className = cls('quickAccess')
+  quickAccess.setAttribute('role', 'toolbar')
+  const quickNewSession = makeControl('quickCell', 'quick-new-session')
+  const quickSidebar = makeControl('quickCell', 'quick-sidebar')
+  quickAccess.append(quickSidebar, quickNewSession)
   const titleCell = makeCell('titleCell', 'DSH Workbook')
-  titleRow.append(
-    makeCell('quickCell', 'Save'),
-    makeCell('quickCell', 'Undo'),
-    titleCell,
-    makeCell('accountCell', 'Shared'),
-  )
+  titleRow.append(quickAccess, titleCell)
 
   const tabs = document.createElement('div')
   tabs.className = cls('ribbonTabs')
+  tabs.setAttribute('role', 'tablist')
   const ribbonTabs = new Map<RibbonTabId, HTMLButtonElement>()
   for (const spec of RIBBON_TABS) {
     const tab = makeControl('ribbonTab', `ribbon-${spec.id}`)
     tab.textContent = spec.label
     tab.dataset.ribbonTab = spec.id
-    if (spec.id === 'home') tab.hidden = true
+    tab.setAttribute('role', 'tab')
     tab.addEventListener('click', () => {
       chrome.dispatchEvent(new CustomEvent('deepcel-ribbon-change', { detail: spec.id }))
     })
@@ -961,19 +1078,29 @@ function createWorkbookChrome(): {
 
   const tools = document.createElement('div')
   tools.className = cls('toolRow')
+  tools.setAttribute('role', 'toolbar')
   const newSession = makeControl('toolCell', 'new-session')
   const newWorkspace = makeControl('toolCell', 'new-workspace')
   newWorkspace.addEventListener('click', () => {
     clickNativeButton([], ['添加工作区', 'Add workspace'])
   })
   const settings = makeControl('toolCell', 'settings')
+  settings.setAttribute('aria-haspopup', 'dialog')
   settings.addEventListener('click', toggleNativeSettings)
-  const workspace = makeControl('toolCell', 'workspace')
-  const preset = makeControl('toolCell', 'preset')
-  const permission = makeControl('toolCell', 'permission')
-  const model = makeControl('toolCell', 'model')
-  const thinking = makeControl('toolCell', 'thinking')
-  for (const label of TOOL_CELLS) tools.append(makeCell('toolCell', label))
+  const sidebar = makeControl('toolCell', 'view-sidebar')
+  const rightbar = makeControl('toolCell', 'view-rightbar')
+  rightbar.addEventListener('click', () => { nativeRightbarToggle()?.click() })
+  const choice = (kind: ChoiceKind): HTMLButtonElement => {
+    const control = makeControl('choiceCell', kind)
+    control.setAttribute('aria-haspopup', 'menu')
+    control.setAttribute('aria-expanded', 'false')
+    return control
+  }
+  const workspace = choice('workspace')
+  const preset = choice('preset')
+  const permission = choice('permission')
+  const model = choice('model')
+  const thinking = choice('thinking')
 
   const formula = document.createElement('div')
   formula.className = cls('formulaRow')
@@ -995,7 +1122,8 @@ function createWorkbookChrome(): {
     chrome,
     columns,
     controls: {
-      ribbonTabs, tools, formulaCell, titleCell, newSession, newWorkspace, settings,
+      ribbonTabs, tools, formulaCell, titleCell, quickNewSession, quickSidebar,
+      newSession, newWorkspace, settings, sidebar, rightbar,
       workspace, preset, permission, model, thinking,
     },
     nameCell,
@@ -1034,7 +1162,7 @@ function createStatusChrome(locale: LocalePort, layout: LayoutPort): {
   workbookTabs: HTMLDivElement
   addWorkbook: HTMLButtonElement
   language: HTMLSpanElement
-  statistics: HTMLSpanElement
+  ready: HTMLSpanElement
 } {
   const footer = document.createElement('div')
   footer.className = cls('statusChrome')
@@ -1047,23 +1175,32 @@ function createStatusChrome(locale: LocalePort, layout: LayoutPort): {
   const addWorkbook = makeControl('newSheetCell', 'new-workbook')
   const language = makeCell('statusCell', localeStatus(locale.getLocale()))
   language.dataset.localeStatus = ''
-  const statistics = makeCell('statisticsCell', '')
-  statistics.dataset.statisticsStatus = ''
+  const ready = makeCell('statusCell', 'Ready')
+  ready.dataset.readyStatus = ''
+  // Zoom is informational: the page has no zoom command, so the cell carries
+  // no +/- affordance that would invite a click.
+  const zoom = makeCell('zoomCell', '100%')
+  zoom.setAttribute('aria-hidden', 'true')
   footer.append(
     sidebar,
     workbookTabs,
     addWorkbook,
     makeCell('statusSpacer', ''),
-    makeCell('statusCell', 'Ready'),
-    statistics,
+    ready,
     language,
-    makeCell('zoomCell', '-  100%  +'),
+    zoom,
   )
-  return { footer, sidebar, workbookTabs, addWorkbook, language, statistics }
+  return { footer, sidebar, workbookTabs, addWorkbook, language, ready }
+}
+
+/** DSH 0.1.7 renders one resident conversation header in both phases. */
+function conversationHeader(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("#root [data-phase] > [data-slot='conversation.header'] > header")
 }
 
 function activeSessionHeader(): HTMLElement | null {
-  return document.querySelector<HTMLElement>("#root [data-phase='active'] [data-slot='conversation.session.header'] > header")
+  const header = conversationHeader()
+  return header?.closest("[data-phase='active']") === null ? null : header
 }
 
 function selectedNativeSessionRow(): HTMLElement | undefined {
@@ -1083,52 +1220,79 @@ function proxyButton(source: HTMLButtonElement, text: string, action: string): H
 
 function currentSessionTitle(header: HTMLElement): string {
   const navigation = header.querySelector('nav')
-  const current = navigation?.querySelector<HTMLButtonElement>('button:disabled')
+  // Breadcrumbs mark the current segment by class; parent segments are buttons.
+  const current = navigation?.querySelector<HTMLElement>("[class*='crumbCurrent']")
+    ?? navigation?.querySelector<HTMLButtonElement>('button:disabled')
     ?? navigation?.querySelector<HTMLButtonElement>('button:last-of-type')
   return current?.textContent?.trim() || navigation?.textContent?.trim() || ''
 }
 
-function createChoiceDialog(
+/**
+ * A ribbon dropdown gallery: one click on a value applies it, like a native
+ * select. Keyboard focus moves through the values with the arrow keys; Escape
+ * or Tab closes the gallery and returns focus to its ribbon button.
+ */
+function createChoiceMenu(
   kind: ChoiceKind,
+  anchor: HTMLElement,
   labels: ShellLabels,
   choices: readonly string[],
   current: string,
-  onConfirm: (choice: string) => void,
-  onClose: () => void,
+  onPick: (choice: string) => void,
+  onClose: (restoreFocus: boolean) => void,
 ): HTMLDivElement {
-  const overlay = document.createElement('div')
-  overlay.className = cls('choiceOverlay')
-  overlay.dataset.deepcelChoiceDialog = kind
-  const dialog = document.createElement('section')
-  dialog.className = cls('choiceDialog')
-  dialog.setAttribute('role', 'dialog')
-  dialog.setAttribute('aria-modal', 'true')
+  const menu = document.createElement('div')
+  menu.className = cls('choiceMenu')
+  menu.dataset.deepcelChoiceMenu = kind
+  menu.dataset.skinChrome = 'menu'
+  menu.setAttribute('role', 'menu')
+  menu.setAttribute('aria-label', labels[kind])
   const heading = document.createElement('div')
   heading.className = cls('choiceHeading')
+  heading.setAttribute('aria-hidden', 'true')
   heading.textContent = labels[kind]
-  const select = document.createElement('select')
-  select.className = cls('choiceSelect')
-  for (const choice of choices) {
-    const option = document.createElement('option')
-    option.value = choice
-    option.textContent = choice
-    option.selected = choice === current
-    select.append(option)
+  menu.append(heading)
+  const items = choices.map((choice, index) => {
+    const item = makeControl('choiceItem', `choice-${index}`)
+    item.setAttribute('role', 'menuitemradio')
+    item.setAttribute('aria-checked', String(choice === current))
+    item.tabIndex = -1
+    item.textContent = choice
+    item.addEventListener('click', () => { onPick(choice) })
+    return item
+  })
+  if (items.length === 0) {
+    const empty = document.createElement('div')
+    empty.className = cls('choiceEmpty')
+    empty.setAttribute('role', 'none')
+    empty.textContent = labels.empty
+    menu.append(empty)
   }
-  const actions = document.createElement('div')
-  actions.className = cls('choiceActions')
-  const cancel = makeControl('choiceButton', 'choice-cancel')
-  cancel.textContent = labels.cancel
-  cancel.addEventListener('click', onClose)
-  const confirm = makeControl('choiceButton', 'choice-confirm')
-  confirm.textContent = labels.confirm
-  confirm.disabled = choices.length === 0
-  confirm.addEventListener('click', () => { onConfirm(select.value) })
-  actions.append(cancel, confirm)
-  dialog.append(heading, select, actions)
-  overlay.append(dialog)
-  overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) onClose() })
-  return overlay
+  menu.append(...items)
+  const focusAt = (index: number): void => {
+    if (items.length === 0) return
+    items[(index + items.length) % items.length]!.focus()
+  }
+  menu.addEventListener('keydown', (event) => {
+    const index = items.indexOf(document.activeElement as HTMLButtonElement)
+    if (event.key === 'ArrowDown') focusAt(index + 1)
+    else if (event.key === 'ArrowUp') focusAt(index < 0 ? -1 : index - 1)
+    else if (event.key === 'Home') focusAt(0)
+    else if (event.key === 'End') focusAt(-1)
+    else if (event.key === 'Escape') onClose(true)
+    else if (event.key === 'Tab') onClose(false)
+    else return
+    event.preventDefault()
+  })
+  const rect = anchor.getBoundingClientRect()
+  menu.style.setProperty('--deepcel-menu-x', `${Math.max(0, Math.min(rect.left, window.innerWidth - 240))}px`)
+  menu.style.setProperty('--deepcel-menu-y', `${rect.bottom}px`)
+  menu.style.setProperty('--deepcel-menu-min-width', `${Math.max(160, rect.width)}px`)
+  queueMicrotask(() => {
+    const checked = items.findIndex(item => item.getAttribute('aria-checked') === 'true')
+    if (menu.isConnected) focusAt(checked < 0 ? 0 : checked)
+  })
+  return menu
 }
 
 /**
@@ -1152,12 +1316,13 @@ export function apply(ctx: Context): void {
     workbookTabs,
     addWorkbook,
     language,
-    statistics,
+    ready,
   } = createStatusChrome(locale, layout)
+  const addins = createAddinsCaption()
   let sidebarOpen = false
-  let activeRibbon: RibbonTabId = 'file'
-  let hadActiveSession = false
-  let choiceDialog: HTMLDivElement | null = null
+  let activeRibbon: RibbonTabId = 'home'
+  let choiceMenu: HTMLDivElement | null = null
+  let choiceAnchor: HTMLButtonElement | null = null
   let formulaInput: HTMLElement | null = null
   let formulaHeight = FORMULA_HEIGHT
   let choiceGeneration = 0
@@ -1241,7 +1406,9 @@ export function apply(ctx: Context): void {
       if (state.blank) state.title = labels.newWorkbook
     }
     const phase = document.querySelector<HTMLElement>('#root [data-phase]')?.dataset.phase
-    if (phase === 'settling') {
+    // A global panel (the add-ins window) replaces the Conversation without
+    // changing the current Session, so it must not open a blank workbook.
+    if (phase === 'settling' || nativeAddinsPanel() !== null) {
       renderWorkbookTabs()
       return
     }
@@ -1297,59 +1464,113 @@ export function apply(ctx: Context): void {
     clickNativeButton([], ['新建会话', 'New session'])
   })
   addWorkbook.addEventListener('click', () => { controls.newSession.click() })
-  const closeChoiceDialog = (): void => {
-    choiceGeneration += 1
-    choiceDialog?.remove()
-    choiceDialog = null
+  const onOutsideChoicePointer = (event: PointerEvent): void => {
+    const target = event.target instanceof Node ? event.target : null
+    if (target !== null && (choiceMenu?.contains(target) === true || choiceAnchor?.contains(target) === true)) return
+    closeChoiceMenu()
   }
-  const openChoiceDialog = (kind: ChoiceKind): void => {
+  function closeChoiceMenu(restoreFocus = false): void {
+    choiceGeneration += 1
+    document.removeEventListener('pointerdown', onOutsideChoicePointer, true)
+    choiceMenu?.remove()
+    choiceMenu = null
+    choiceAnchor?.setAttribute('aria-expanded', 'false')
+    if (restoreFocus) choiceAnchor?.focus()
+    choiceAnchor = null
+  }
+  const toggleChoiceMenu = (kind: ChoiceKind, anchor: HTMLButtonElement): void => {
+    if (choiceAnchor === anchor) {
+      closeChoiceMenu(true)
+      return
+    }
+    closeChoiceMenu()
     const generation = ++choiceGeneration
-    choiceDialog?.remove()
-    choiceDialog = null
+    choiceAnchor = anchor
+    anchor.setAttribute('aria-expanded', 'true')
     const loadChoices = kind === 'workspace' || kind === 'preset'
       ? heroChoices(kind)
       : kind === 'permission' ? permissionChoices() : modelChoices(kind)
     void loadChoices.then((choices) => {
       if (generation !== choiceGeneration) return
       const labels = labelsFor(locale.getLocale())
-      const current = kind === 'workspace' || kind === 'preset'
-        ? nativeHeroChoiceTrigger(kind)?.textContent?.trim() ?? ''
-        : kind === 'permission'
-          ? nativePermissionTrigger()?.textContent?.trim() ?? ''
-          : modelLabels()[kind]
-      choiceDialog = createChoiceDialog(kind, labels, choices, current, (choice) => {
-        if (kind === 'workspace' || kind === 'preset') void applyHeroChoice(kind, choice)
-        else if (kind === 'permission') void applyPermissionChoice(choice)
-        else void applyModelChoice(kind, choice)
-        closeChoiceDialog()
-      }, closeChoiceDialog)
-      body.append(choiceDialog)
+      choiceMenu = createChoiceMenu(kind, anchor, labels, choices, currentChoice(kind), (choice) => {
+        closeChoiceMenu(true)
+        const applied = kind === 'workspace' || kind === 'preset'
+          ? applyHeroChoice(kind, choice)
+          : kind === 'permission' ? applyPermissionChoice(choice) : applyModelChoice(kind, choice)
+        void applied.then(scheduleShellSync)
+      }, closeChoiceMenu)
+      body.append(choiceMenu)
+      document.addEventListener('pointerdown', onOutsideChoicePointer, true)
     })
   }
-  controls.workspace.addEventListener('click', () => { openChoiceDialog('workspace') })
-  controls.preset.addEventListener('click', () => { openChoiceDialog('preset') })
-  controls.permission.addEventListener('click', () => { openChoiceDialog('permission') })
-  controls.model.addEventListener('click', () => { openChoiceDialog('model') })
-  controls.thinking.addEventListener('click', () => { openChoiceDialog('thinking') })
+  for (const kind of ['workspace', 'preset', 'permission', 'model', 'thinking'] as const) {
+    const control = controls[kind]
+    control.addEventListener('click', () => { toggleChoiceMenu(kind, control) })
+  }
+  controls.quickNewSession.addEventListener('click', () => { controls.newSession.click() })
+  const toggleSidebar = (): void => { layout.toggleSidebar() }
+  controls.quickSidebar.addEventListener('click', toggleSidebar)
+  controls.sidebar.addEventListener('click', toggleSidebar)
+  // Proxies for native view tabs and global panels are kept per index, so a
+  // selection change updates the pressed state in place and keeps focus.
+  const viewProxies: HTMLButtonElement[] = []
+  const panelProxies: HTMLButtonElement[] = []
+  const nativeViewTabs = (): HTMLButtonElement[] =>
+    [...activeSessionHeader()?.querySelectorAll<HTMLButtonElement>("[role='tablist'] [role='tab']") ?? []]
+  const proxyAt = (
+    proxies: HTMLButtonElement[],
+    index: number,
+    action: string,
+    source: () => HTMLButtonElement | undefined,
+  ): HTMLButtonElement => {
+    let proxy = proxies[index]
+    if (proxy === undefined) {
+      proxy = makeControl('toolCell', action)
+      proxy.addEventListener('click', () => { source()?.click() })
+      proxies[index] = proxy
+    }
+    return proxy
+  }
+  const setChoiceCopy = (control: HTMLButtonElement, name: string, value: string): void => {
+    if (control.dataset.choiceName === name && control.dataset.choiceValue === value) return
+    control.dataset.choiceName = name
+    control.dataset.choiceValue = value
+    const nameCell = makeCell('choiceName', name)
+    const valueCell = makeCell('choiceValue', value)
+    control.replaceChildren(nameCell, valueCell)
+    control.setAttribute('aria-label', `${name}: ${value}`)
+    control.title = `${name}: ${value}`
+  }
+  const setCopy = (control: HTMLButtonElement, text: string, label = text): void => {
+    if (control.textContent !== text) control.textContent = text
+    if (control.getAttribute('aria-label') !== label) control.setAttribute('aria-label', label)
+    if (control.title !== label) control.title = label
+  }
   const syncCopy = (): void => {
     const labels = labelsFor(locale.getLocale())
+    const sidebarLabel = sidebarOpen ? labels.sidebarHide : labels.sidebarShow
     sidebarControl.textContent = sidebarOpen ? '<' : '>'
-    sidebarControl.title = sidebarOpen ? labels.sidebarHide : labels.sidebarShow
-    sidebarControl.setAttribute('aria-label', sidebarOpen ? labels.sidebarHide : labels.sidebarShow)
+    sidebarControl.title = sidebarLabel
+    sidebarControl.setAttribute('aria-label', sidebarLabel)
     controls.ribbonTabs.get('file')!.textContent = labels.file
-    controls.ribbonTabs.get('home')!.textContent = labels.conversation
-    controls.ribbonTabs.get('manage')!.textContent = labels.manage
-    controls.newSession.textContent = labels.newSession
-    controls.newSession.setAttribute('aria-label', labels.newSession)
-    controls.newWorkspace.textContent = labels.newWorkspace
-    controls.newWorkspace.setAttribute('aria-label', labels.newWorkspace)
-    controls.settings.textContent = labels.settings
-    controls.settings.setAttribute('aria-label', labels.settings)
-    controls.workspace.setAttribute('aria-label', labels.workspace)
-    controls.preset.setAttribute('aria-label', labels.preset)
-    controls.permission.setAttribute('aria-label', labels.permission)
-    controls.model.setAttribute('aria-label', labels.model)
-    controls.thinking.setAttribute('aria-label', labels.thinking)
+    controls.ribbonTabs.get('home')!.textContent = labels.home
+    controls.ribbonTabs.get('view')!.textContent = labels.view
+    controls.quickNewSession.parentElement?.setAttribute('aria-label', labels.quickAccess)
+    setCopy(controls.quickNewSession, `+ ${labels.newSession}`, labels.newSession)
+    setCopy(controls.quickSidebar, labels.sidebar, sidebarLabel)
+    setCopy(controls.newSession, labels.newSession)
+    setCopy(controls.newWorkspace, labels.newWorkspace)
+    setCopy(controls.settings, labels.settings)
+    setCopy(controls.sidebar, labels.sidebar, sidebarLabel)
+    setCopy(controls.rightbar, labels.rightbar)
+    for (const control of [controls.quickSidebar, controls.sidebar]) {
+      control.setAttribute('aria-pressed', String(sidebarOpen))
+    }
+    ready.textContent = labels.ready
+    addins.title.textContent = labels.addins
+    addins.close.setAttribute('aria-label', labels.closeAddins)
+    addins.close.title = labels.closeAddins
     addWorkbook.textContent = labels.addWorkbook
     addWorkbook.setAttribute('aria-label', labels.addWorkbook)
     syncWorkbookTabs()
@@ -1365,81 +1586,94 @@ export function apply(ctx: Context): void {
     const { frame, sidebar } = shell
     sidebarOpen = !frame.hasAttribute('data-sidebar-collapsed')
     const offset = sidebarOpen ? sidebarTargetWidth(frame, sidebar) : 0
-    body.dataset.deepcelSidebar = sidebarOpen ? 'open' : 'closed'
-    body.style.setProperty('--deepcel-sidebar-offset', `${offset}px`)
+    const sidebarState = sidebarOpen ? 'open' : 'closed'
+    if (body.dataset.deepcelSidebar !== sidebarState) body.dataset.deepcelSidebar = sidebarState
+    const offsetValue = `${offset}px`
+    if (body.style.getPropertyValue('--deepcel-sidebar-offset') !== offsetValue) {
+      body.style.setProperty('--deepcel-sidebar-offset', offsetValue)
+    }
     sidebarControl.setAttribute('aria-pressed', String(sidebarOpen))
     syncCopy()
   }
+  const toolGroup = (label: string, items: readonly HTMLElement[]): HTMLElement => {
+    const group = document.createElement('div')
+    group.className = cls('toolGroup')
+    group.setAttribute('role', 'group')
+    group.setAttribute('aria-label', label)
+    const caption = makeCell('toolGroupLabel', label)
+    caption.setAttribute('aria-hidden', 'true')
+    group.append(...items, caption)
+    return group
+  }
   const syncRibbon = (): void => {
-    controls.settings.setAttribute('aria-pressed', String(nativeSettingsTrigger()?.getAttribute('aria-expanded') === 'true'))
+    controls.settings.setAttribute('aria-expanded', String(nativeSettingsTrigger()?.getAttribute('aria-expanded') === 'true'))
     const header = activeSessionHeader()
-    const hasActiveSession = header !== null
-    if (hasActiveSession && !hadActiveSession) activeRibbon = 'home'
-    if (!hasActiveSession && hadActiveSession && activeRibbon === 'home') activeRibbon = 'file'
-    hadActiveSession = hasActiveSession
-
-    controls.ribbonTabs.get('home')!.hidden = !hasActiveSession
-
-    for (const [id, tab] of controls.ribbonTabs) tab.toggleAttribute('data-active', id === activeRibbon)
     const labels = labelsFor(locale.getLocale())
+    for (const [id, tab] of controls.ribbonTabs) {
+      tab.toggleAttribute('data-active', id === activeRibbon)
+      tab.setAttribute('aria-selected', String(id === activeRibbon))
+    }
     const heroChoices = nativeHeroChoiceTriggers()
     const permissionTrigger = nativePermissionTrigger()
+    const modelTrigger = nativeModelTrigger()
     const models = modelLabels()
-    controls.workspace.textContent = `${labels.workspace}: ${heroChoices.workspace?.textContent?.trim() || '-'}`
+    setChoiceCopy(controls.workspace, labels.workspace, heroChoices.workspace?.textContent?.trim() || '-')
     controls.workspace.disabled = heroChoices.workspace === undefined || heroChoices.workspace.disabled
-    controls.preset.textContent = `${labels.preset}: ${heroChoices.preset?.textContent?.trim() || '-'}`
+    setChoiceCopy(controls.preset, labels.preset, heroChoices.preset?.textContent?.trim() || '-')
     controls.preset.disabled = heroChoices.preset === undefined || heroChoices.preset.disabled
-    controls.permission.textContent = `${labels.permission}: ${permissionTrigger?.textContent?.trim() || '-'}`
+    setChoiceCopy(controls.permission, labels.permission, permissionLabel(permissionTrigger) || '-')
     controls.permission.disabled = permissionTrigger === undefined || permissionTrigger.disabled
-    controls.model.textContent = `${labels.model}: ${models.model || '-'}`
-    controls.model.disabled = nativeModelTrigger()?.disabled ?? true
-    controls.thinking.textContent = `${labels.thinking}: ${models.thinking || '-'}`
-    controls.thinking.disabled = nativeModelTrigger()?.disabled ?? true
-    const desired: HTMLElement[] = []
+    setChoiceCopy(controls.model, labels.model, models.model || '-')
+    controls.model.disabled = modelTrigger?.disabled ?? true
+    setChoiceCopy(controls.thinking, labels.thinking, models.thinking || '-')
+    controls.thinking.disabled = modelTrigger?.disabled ?? true
+    controls.rightbar.disabled = nativeRightbarToggle() === undefined
+    controls.rightbar.setAttribute('aria-pressed', String(rightbarOpen()))
+
+    const desired: (readonly [string, readonly HTMLElement[]])[] = []
     if (activeRibbon === 'file') {
-      desired.push(
-        controls.newWorkspace, controls.newSession, controls.settings,
-      )
-    } else if (activeRibbon === 'home' && header !== null) {
-      const sources = [...header.querySelectorAll<HTMLButtonElement>("[role='tablist'] [role='tab']")]
-      if (sources.length === 0) {
-        const chat = makeControl('toolCell', 'view-chat')
-        chat.textContent = labels.chat
-        chat.setAttribute('role', 'tab')
-        chat.setAttribute('aria-selected', 'true')
-        desired.push(chat)
-      }
-      for (const [index, source] of sources.entries()) {
-        const label = index === 0 ? labels.chat : source.textContent?.trim() || `View ${index + 1}`
-        const proxy = proxyButton(source, label, `view-${index}`)
+      const panels = nativePanelButtons().map((source, index) => {
+        const proxy = proxyAt(panelProxies, index, `panel-${index}`, () => nativePanelButtons()[index])
+        setCopy(proxy, source.textContent?.trim() || source.getAttribute('aria-label') || `Panel ${index + 1}`)
+        proxy.setAttribute('aria-pressed', String(source.getAttribute('aria-current') === 'page'))
+        return proxy
+      })
+      desired.push([labels.groupNew, [controls.newSession, controls.newWorkspace]])
+      desired.push([labels.groupOptions, [controls.settings, ...panels]])
+    } else if (activeRibbon === 'home') {
+      const target = heroChoices.workspace !== undefined || heroChoices.preset !== undefined
+        ? [controls.workspace, controls.preset]
+        : []
+      const run = [controls.model, ...(models.thinking === '' ? [] : [controls.thinking]), controls.permission]
+      desired.push([labels.groupTarget, target], [labels.groupRun, run])
+    } else {
+      const views = (header === null ? [] : nativeViewTabs()).map((source, index) => {
+        const proxy = proxyAt(viewProxies, index, `view-${index}`, () => nativeViewTabs()[index])
+        setCopy(proxy, index === 0 ? labels.chat : source.textContent?.trim() || `View ${index + 1}`)
         proxy.setAttribute('role', 'tab')
         proxy.setAttribute('aria-selected', source.getAttribute('aria-selected') ?? 'false')
-        desired.push(proxy)
-      }
-    } else if (activeRibbon === 'manage') {
-      if (heroChoices.workspace !== undefined || heroChoices.preset !== undefined) {
-        desired.push(controls.workspace, controls.preset)
-      }
-      desired.push(controls.permission, controls.model, controls.thinking)
-    } else {
-      for (const label of TOOL_CELLS) desired.push(makeCell('toolCell', label))
+        proxy.disabled = source.disabled
+        return proxy
+      })
+      desired.push([labels.groupSheets, views], [labels.groupWindow, [controls.sidebar, controls.rightbar]])
     }
-    const toolsSignature = `${activeRibbon}|${desired.map(item => `${item.textContent}:${item.getAttribute('aria-selected')}`).join('|')}`
+    const groups = desired.filter(([, items]) => items.length > 0)
+    const toolsSignature = groups
+      .map(([label, items]) => `${label}:${items.map(item => item.dataset.skinControl ?? '').join(',')}`)
+      .join('|')
     if (controls.tools.dataset.ribbonSignature !== toolsSignature) {
-      controls.tools.replaceChildren(...desired)
+      if (choiceAnchor !== null && !groups.some(([, items]) => items.includes(choiceAnchor!))) closeChoiceMenu()
+      controls.tools.replaceChildren(...groups.map(([label, items]) => toolGroup(label, items)))
       controls.tools.dataset.ribbonSignature = toolsSignature
     }
     syncWorkbookTabs()
 
+    const projected = conversationHeader()
     for (const source of document.querySelectorAll<HTMLElement>('[data-deepcel-header-source]')) {
-      if (source !== header) delete source.dataset.deepcelHeaderSource
+      if (source !== projected) delete source.dataset.deepcelHeaderSource
     }
-    if (header === null) {
-      controls.titleCell.textContent = 'DSH Workbook'
-      return
-    }
-    header.dataset.deepcelHeaderSource = ''
-    const title = currentSessionTitle(header)
+    if (projected !== null) projected.dataset.deepcelHeaderSource = ''
+    const title = header === null ? 'DSH Workbook' : currentSessionTitle(header) || 'DSH Workbook'
     if (controls.titleCell.textContent !== title) controls.titleCell.textContent = title
   }
   const resizeFormulaInput = (): void => {
@@ -1489,6 +1723,27 @@ export function apply(ctx: Context): void {
     syncRibbon()
   }
   workbook.addEventListener('deepcel-ribbon-change', onRibbonChange)
+  const closeAddins = (): void => {
+    if (layout.selectPanel !== undefined) layout.selectPanel(null)
+    else {
+      const current = sessions.list.getSnapshot().current
+      if (current !== undefined) sessions.open(current)
+    }
+  }
+  addins.close.addEventListener('click', closeAddins)
+  const syncAddins = (): void => {
+    const open = nativeAddinsPanel() !== null
+    if (open !== body.hasAttribute('data-deepcel-addins')) body.toggleAttribute('data-deepcel-addins', open)
+    if (addins.caption.hidden === open) addins.caption.hidden = !open
+  }
+  // Escape closes the window only when nothing inside it (a dialog, a menu or
+  // a gallery) is open and no field already used the key.
+  const onAddinsKeydown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Escape' || event.defaultPrevented || !body.hasAttribute('data-deepcel-addins')) return
+    if (document.querySelector("[aria-modal='true'], [role='menu'], [role='listbox']") !== null) return
+    closeAddins()
+  }
+  document.addEventListener('keydown', onAddinsKeydown)
   let shellFrame: number | undefined
   const scheduleShellSync = (): void => {
     if (shellFrame !== undefined) cancelAnimationFrame(shellFrame)
@@ -1498,6 +1753,7 @@ export function apply(ctx: Context): void {
       syncShell()
       syncRibbon()
       syncFormulaInput()
+      syncAddins()
     })
   }
   const syncCoordinates = (): void => {
@@ -1510,12 +1766,6 @@ export function apply(ctx: Context): void {
     language.textContent = localeStatus(locale.getLocale())
     syncCopy()
     syncRibbon()
-  }
-  const syncStatistics = (): void => {
-    const sources = [...document.querySelectorAll<HTMLElement>('[data-deepcel-stats-source]')]
-    const text = sources.findLast(source => source.isConnected)?.textContent?.trim() ?? ''
-    if (statistics.textContent !== text) statistics.textContent = text
-    statistics.toggleAttribute('hidden', text === '')
   }
   window.addEventListener('resize', syncCoordinates)
   const shellObserver = new MutationObserver((records) => {
@@ -1533,19 +1783,20 @@ export function apply(ctx: Context): void {
     })
     if (changed) {
       scheduleShellSync()
-      requestAnimationFrame(syncStatistics)
     }
   })
   shellObserver.observe(document.body, { attributes: true, childList: true, subtree: true })
   const unsubscribeLocale = locale.subscribe(syncLocale)
-  body.append(worksheet.grid, worksheet.selection, workbook, rows, status)
+  body.append(worksheet.grid, worksheet.selection, workbook, rows, status, addins.caption)
   syncLocale()
-  syncStatistics()
   scheduleShellSync()
   document.title = SKIN_TITLE
 
   ctx.effect(() => () => {
     window.removeEventListener('resize', syncCoordinates)
+    document.removeEventListener('keydown', onAddinsKeydown)
+    addins.caption.remove()
+    body.removeAttribute('data-deepcel-addins')
     workbook.removeEventListener('deepcel-ribbon-change', onRibbonChange)
     shellObserver.disconnect()
     if (shellFrame !== undefined) cancelAnimationFrame(shellFrame)
@@ -1555,9 +1806,6 @@ export function apply(ctx: Context): void {
     }
     for (const composer of document.querySelectorAll<HTMLElement>('[data-deepcel-merged-input]')) {
       delete composer.dataset.deepcelMergedInput
-    }
-    for (const source of document.querySelectorAll<HTMLElement>('[data-deepcel-stats-source]')) {
-      delete source.dataset.deepcelStatsSource
     }
     for (const header of document.querySelectorAll<HTMLElement>('[data-deepcel-header-source]')) {
       delete header.dataset.deepcelHeaderSource
@@ -1573,7 +1821,7 @@ export function apply(ctx: Context): void {
       delete source.dataset.deepcelHeroChoiceSource
     }
     formulaInput?.removeEventListener('input', resizeFormulaInput)
-    closeChoiceDialog()
+    closeChoiceMenu()
     body.removeAttribute('data-dsh-deepcel')
     delete body.dataset.deepcelSidebar
     delete body.dataset.deepcelModelProbing

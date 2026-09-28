@@ -3,4 +3,4 @@
 # exclusion remains owned by the profile's skin manager.
 - insert:
     - id: ui-skin-deepcel
-      name: '@dsh-external/dsh-client-ui-skin-deepcel'
+      name: '@smalltailqwq/dsh-client-ui-skin-deepcel'

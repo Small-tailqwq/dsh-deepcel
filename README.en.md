@@ -8,16 +8,33 @@ manages files, sessions and run options; messages, tools, trajectory and the
 composer fall into one uniform cell grid; workbook tabs carry multi-session
 switching.
 
-Target host: DSH `0.1.2-rc.1`. The formula bar keeps the native Lexical editor,
-attachments and commands; targets, queued messages, turn navigation and usage
-popups adopt worksheet styling.
+Target host: DSH `0.1.7-rc.2` (optional peer `@deepseek-ai/dsh
+>=0.1.7-rc.1 <0.3.0-0`). The formula bar keeps the native Lexical editor,
+attachments, commands and send controls. The conversation header, right
+sidebar, process groups, turn navigation and statistics dialogs adopt
+worksheet styling. Checked in an isolated 0.1.7-rc.2 instance with a local mock
+model: light/dark themes, narrow windows, ribbon menus, folding and tables.
 
 ## Features
 
+- A ribbon with only working tabs: **File** (new session/workspace, settings,
+  global panels), **Home** (model, thinking, permission, plus the next
+  session's workspace and agent preset) and **View** (chat/trajectory views,
+  sidebar and side panel); values apply from a dropdown in one click, with
+  arrow keys and Escape
+- Quick Access on the title bar (sidebar, new session); native session actions
+  stay at its right end
+- The Plugins page floats over the sheet as an "Add-ins" secondary window with
+  its native list, details, switches and install flow; × or Escape returns to
+  the current session
 - Full row numbers, column labels, background grid, active-cell and workbook
   status bar
 - Conversation prose mapped to merged cells by semantic block; user messages
   use a review-comment style
+- Markdown tables keep one row per record; wide tables scroll sideways inside
+  their cell with the first column frozen
+- A turn's process group is one merged range whose group and step rows fold
+  with +/- outline controls
 - Input edited in the formula bar, expanding with multiple lines
 - Workspaces and sessions arranged in a workbook outline hierarchy; expanding
   the sidebar moves the whole sheet together
@@ -49,7 +66,9 @@ PowerShell `#` starts a comment, so the spec must be wrapped in single quotes
 (replace `web` with your profile name). Restart DSH Web after the first
 install, then pick Deepcel in **Settings → Skin manager**; later switches use
 config hot-reload. The package name is
-`@dsh-external/dsh-client-ui-skin-deepcel`, wiring id `ui-skin-deepcel`.
+`@smalltailqwq/dsh-client-ui-skin-deepcel`, wiring id `ui-skin-deepcel`.
+Once published to npm it can also be installed by name:
+`dsh plugin --profile web add @smalltailqwq/dsh-client-ui-skin-deepcel`.
 
 ## Development & Build
 

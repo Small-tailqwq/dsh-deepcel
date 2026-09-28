@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Deepcel Workbook</title>
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="#f4f8f5"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="11.25" fill="none" stroke="#c9d8cd" stroke-width="1.5"/>
+  <rect x="11" y="12" width="42" height="40" rx="2" fill="#ffffff" stroke="#217346" stroke-width="2"/>
+  <path d="M11 14a2 2 0 0 1 2-2h38a2 2 0 0 1 2 2v7H11z" fill="#217346"/>
+  <path d="M21 21v31M32 21v31M43 21v31M11 31h42M11 41h42" stroke="#9fbfa9" stroke-width="1.5" fill="none"/>
+  <rect x="32" y="31" width="11" height="10" fill="#fff4b8" stroke="#185c37" stroke-width="2.5"/>
+  <rect x="41" y="39" width="4" height="4" fill="#185c37"/>
+  <path d="M15.5 15.5h3M24 15.5h5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -1,14 +1,15 @@
 {
-  "name": "@dsh-external/dsh-client-ui-skin-deepcel",
-  "description": "一款模仿 excel 的 dsh 皮肤",
+  "name": "@smalltailqwq/dsh-client-ui-skin-deepcel",
+  "description": "A worksheet skin that lays DSH out as a spreadsheet: ribbon, formula bar, cell grid and workbook tabs.",
+  "icon": "assets/plugin-icon.svg",
   "version": "0.0.1",
-  "private": true,
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
     "./skin.json": "./skin.json",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "dsh": {
@@ -39,8 +40,26 @@
     "test": "vitest run"
   },
   "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Small-tailqwq/dsh-deepcel.git"
+  },
+  "homepage": "https://github.com/Small-tailqwq/dsh-deepcel#readme",
+  "bugs": {
+    "url": "https://github.com/Small-tailqwq/dsh-deepcel/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.2"
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh": ">=0.1.7-rc.1 <0.3.0-0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
@@ -51,10 +70,13 @@
     "vitest": "^4.1.8"
   },
   "files": [
-    "lib",
+    "lib/index.js",
+    "lib/client.js",
     "cordis.patch.yml",
     "skin.json",
     "preview",
+    "locale/*.json",
+    "assets/plugin-icon.svg",
     "LICENSE",
     "NOTICE.md",
     "README.md",

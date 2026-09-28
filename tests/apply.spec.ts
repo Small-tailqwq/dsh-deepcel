@@ -17,7 +17,9 @@ interface TestLocale {
 
 interface TestLayout {
   toggles: number
+  panels: (string | null)[]
   toggleSidebar(): void
+  selectPanel(panelId: string | null): void
 }
 
 interface TestSessions {
@@ -42,7 +44,12 @@ function makeLocale(): TestLocale {
 }
 
 function makeLayout(): TestLayout {
-  return { toggles: 0, toggleSidebar() { this.toggles += 1 } }
+  return {
+    toggles: 0,
+    panels: [],
+    toggleSidebar() { this.toggles += 1 },
+    selectPanel(panelId) { this.panels.push(panelId) },
+  }
 }
 
 function makeSessions(current?: string): TestSessions {
@@ -74,6 +81,33 @@ async function mount(
   return mounted
 }
 
+/**
+ * DSH 0.1.7 resident header: phase > conversation.header slot > header >
+ * session.header fragment slot > title row (crumbs) + view tablist.
+ */
+function makeResidentHeader(title: string): { slot: HTMLElement, header: HTMLElement, titleRow: HTMLElement } {
+  const slot = document.createElement('div')
+  slot.dataset.slot = 'conversation.header'
+  const header = document.createElement('header')
+  const sessionSlot = document.createElement('div')
+  sessionSlot.dataset.slot = 'conversation.session.header'
+  const titleRow = document.createElement('div')
+  titleRow.className = 'native_titleRow_hash'
+  const cluster = document.createElement('div')
+  cluster.className = 'native_titleCluster_hash'
+  const crumbs = document.createElement('nav')
+  const current = document.createElement('span')
+  current.className = 'native_crumb_hash native_crumbCurrent_hash'
+  current.textContent = title
+  crumbs.append(current)
+  cluster.append(crumbs)
+  titleRow.append(cluster)
+  sessionSlot.append(titleRow)
+  header.append(sessionSlot)
+  slot.append(header)
+  return { slot, header, titleRow }
+}
+
 afterEach(async () => {
   await fiber?.dispose()
   fiber = undefined
@@ -92,11 +126,14 @@ describe('Deepcel skin apply', () => {
 
   it('renders workbook text chrome and retracts every node', async () => {
     fiber = await mount()
-    expect(document.body.querySelectorAll('[data-skin-chrome]')).toHaveLength(3)
-    expect(document.querySelector('[data-skin-control="ribbon-file"]')?.hasAttribute('data-active')).toBe(true)
-    expect(document.querySelector('[data-skin-control="ribbon-home"]')?.textContent).toBe('Conversation')
-    expect(document.querySelector('[data-skin-control="ribbon-home"]')?.hasAttribute('hidden')).toBe(true)
-    expect(document.querySelector('[data-skin-control="ribbon-manage"]')?.textContent).toBe('Manage')
+    expect(document.body.querySelectorAll('[data-skin-chrome]')).toHaveLength(4)
+    // Every ribbon tab owns commands; Home, with the run options, opens first.
+    expect([...document.querySelectorAll('[data-ribbon-tab]')].map(tab => tab.textContent)).toEqual(['File', 'Home', 'View'])
+    expect(document.querySelector('[data-skin-control="ribbon-home"]')?.getAttribute('aria-selected')).toBe('true')
+    expect(document.querySelector('[data-skin-control="quick-new-session"]')?.textContent).toBe('+ New session')
+    expect(document.querySelector('[data-skin-control="quick-sidebar"]')?.getAttribute('aria-pressed')).toBe('false')
+    expect(document.querySelector('[data-skin-chrome="workbook"]')?.textContent).not.toMatch(/Save|Undo|Shared|Filter|Review/)
+    expect(document.querySelector('[data-ready-status]')?.textContent).toBe('Ready')
     expect(document.querySelector('[data-skin-control="sidebar"]')?.textContent).toBe('>')
     expect(document.querySelector('[data-skin-control="sidebar"]')?.closest('[data-skin-chrome]')?.getAttribute('data-skin-chrome')).toBe('status')
     expect(document.querySelector('[data-skin-chrome="workbook"]')?.textContent).not.toContain('=AGENT(')
@@ -160,10 +197,10 @@ describe('Deepcel skin apply', () => {
     heroStack.className = 'LQuP4a_stack'
     const headline = document.createElement('div')
     headline.className = 'LQuP4a_headline'
+    const titleGroup = document.createElement('span')
+    titleGroup.className = 'LQuP4a_titleGroup'
     const title = document.createElement('span')
-    title.className = 'LQuP4a_headlineText'
-    const titleText = document.createElement('strong')
-    titleText.textContent = '探索未至之境'
+    title.textContent = '探索未至之境'
     const preview = document.createElement('span')
     preview.className = 'LQuP4a_previewBadge'
     preview.textContent = '预览版'
@@ -178,8 +215,8 @@ describe('Deepcel skin apply', () => {
       height: 24,
       toJSON: () => ({}),
     })
-    title.append(titleText)
-    headline.append(title, preview)
+    titleGroup.append(title, preview)
+    headline.append(titleGroup)
     heroStack.append(headline)
     heroRoot.append(heroStack)
     composerStack.append(heroRoot)
@@ -195,7 +232,7 @@ describe('Deepcel skin apply', () => {
     expect(headline.dataset.deepcelSelectedRange).toBe('formula')
     expect(selection?.style.getPropertyValue('--deepcel-selection-width')).toBe('60px')
 
-    titleText.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 145 }))
+    title.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 200, clientY: 145 }))
 
     expect(document.querySelector('[data-cell-name]')?.textContent).toBe('C1:G1')
     expect(selection?.hasAttribute('data-overlay')).toBe(true)
@@ -230,14 +267,28 @@ describe('Deepcel skin apply', () => {
     expect(stylesheet).toMatch(/\[data-phase='active'\] \[data-conversation-scroll\]\[data-deepcel-workbook-flow\] \{[\s\S]*?display: grid !important;[\s\S]*?grid-auto-rows: var\(--deepcel-row-height\);/)
     expect(stylesheet).toContain('[data-deepcel-flow-container]')
     expect(stylesheet).toMatch(/\[data-phase='active'\] \[data-deepcel-workbook-flow\] \[data-composer-card\] \{[\s\S]*?display: grid !important;[\s\S]*?grid-template-rows:/)
-    expect(stylesheet).toContain('[data-deepcel-single-line]')
+    // Worksheet text reads left to right; a single-line cell is not re-centred.
+    expect(stylesheet).not.toMatch(/\[data-deepcel-single-line\] \{\s*text-align: center;/)
+    // Markdown tables keep one 24px row per record and scroll sideways with a frozen first column.
+    expect(stylesheet).toMatch(/\[class\*='tableScroll'\]\[data-deepcel-content-cell\] \{[\s\S]*?overflow-x: auto;[\s\S]*?overflow-y: hidden;/)
+    expect(stylesheet).toMatch(/\[class\*='tableScroll'\]\[data-deepcel-content-cell\] :is\(th, td\) \{[\s\S]*?height: var\(--deepcel-row-height\);[\s\S]*?white-space: nowrap;/)
+    expect(stylesheet).toMatch(/:is\(th, td\):first-child \{[\s\S]*?position: sticky;[\s\S]*?left: 0;/)
+    // Process groups are merged ranges with outline rows; the collapsed right panel shell stays unpainted.
+    expect(stylesheet).toMatch(/\[data-chat-flow\] > \[data-step-process\]\[data-deepcel-message-range\]:not\(\[hidden\]\) \{[\s\S]*?overflow: clip;/)
+    expect(stylesheet).toMatch(/\[data-step-process\] \[data-step-process-body\] \{[\s\S]*?max-height: calc\(16 \* var\(--deepcel-row-height\)\) !important;/)
+    expect(stylesheet).not.toMatch(/:is\(\[data-sidebar-right-panel\], \[data-dockkit-float\]\) \{[\s\S]*?background:/)
+    expect(stylesheet).toMatch(/\[data-deepcel-header-source\] :is\(\[class\*='titleRow'\], \[data-conversation-header-leading\]\) \{[\s\S]*?container-type: normal !important;/)
+    expect(stylesheet).toContain(":has(+ * > * > [data-chat-flow]):has(> nav)")
+    // The Plugins page floats as a secondary window beneath the skin caption bar.
+    expect(stylesheet).toMatch(/\[data-deepcel-addins\] section\[data-plugin-panel\] \{[\s\S]*?position: fixed !important;[\s\S]*?z-index: 1000001;/)
+    expect(stylesheet).toMatch(/\.addinsCaption \{[\s\S]*?top: calc\(var\(--deepcel-addins-top\) - 30px\);/)
     expect(stylesheet).toMatch(/\[data-deepcel-content-cell\] \{\s*position: relative;\s*z-index: 2;/)
     expect(stylesheet).toContain("[data-deepcel-composer-range] :has(> [data-composer-card])")
     expect(stylesheet).not.toContain("[data-chat-flow-kind='assistant-step'] > * > * > div")
     expect(stylesheet).toContain("content: 'COMMENT';")
     expect(stylesheet).toMatch(/\[data-deepcel-message-range\]\[hidden='until-found'\] \{[\s\S]*?height: 0;[\s\S]*?content-visibility: hidden;/)
     expect(stylesheet).toMatch(/\[data-turn-tail\]\[data-actions-reveal\] > \[class\*='actions'\]\[data-deepcel-content-cell\] \{[\s\S]*?overflow: visible;/)
-    expect(stylesheet).toMatch(/\[data-turn-tail\]\[data-actions-reveal\] > \[class\*='actions'\] > button\[aria-label\] \{[\s\S]*?min-width: max-content;/)
+    expect(stylesheet).toMatch(/\[data-turn-tail\]\[data-actions-reveal\] > \[class\*='actions'\] button\[aria-label\] \{[\s\S]*?min-width: max-content;/)
     expect(stylesheet).toMatch(/\[data-turn-tail\] \[role='tooltip'\] \{[\s\S]*?color: #fff !important;/)
     expect(stylesheet).toMatch(/\[data-sample='bash'\]\[data-variant='bash'\]\[data-deepcel-content-cell\] \{[\s\S]*?display: flex;/)
     expect(stylesheet).toMatch(/\[data-sample='bash'\]\[data-variant='bash'\] \+ \* > \[data-terminal\]\[data-deepcel-content-cell\] \{[\s\S]*?padding: 0 !important;/)
@@ -269,7 +320,8 @@ describe('Deepcel skin apply', () => {
     expect(stylesheet).toMatch(/\[data-composer-card\] \{[\s\S]*?border-bottom: 1px solid var\(--deepcel-grid-strong\) !important;/)
     expect(stylesheet).not.toContain('body[data-dsh-deepcel] [data-composer-seat]')
     expect(stylesheet).not.toContain('body[data-dsh-deepcel] #root')
-    expect(stylesheet).toContain('.choiceDialog')
+    expect(stylesheet).toContain('.choiceMenu')
+    expect(stylesheet).not.toContain('.choiceDialog')
     expect(stylesheet).toContain("[data-deepcel-model-probing] [role='menu']")
     expect(stylesheet).toMatch(/\[data-deepcel-hero-choice-source\] \{\s*display: none !important;/)
     expect(stylesheet).toMatch(/\.sheetTabCell:hover button\.workbookClose,[\s\S]*?opacity: 1;/)
@@ -287,27 +339,34 @@ describe('Deepcel skin apply', () => {
     expect(stylesheet).toMatch(/\[class\*='search'\]\s*> input\[class\*='searchInput'\] \{[\s\S]*?border: 0 !important;/)
     expect(stylesheet).toMatch(/\[class\*='search'\]\[class\*='searchExpanded'\] \{[\s\S]*?border: 1px solid var\(--deepcel-grid-strong\) !important;/)
     expect(stylesheet).toContain("input:not([class*='searchInput'])")
-    expect(stylesheet).toMatch(/\[class\*='headlineText'\] \{[\s\S]*?background: var\(--deepcel-sheet\);[\s\S]*?user-select: text;/)
+    expect(stylesheet).toMatch(/\[class\*='titleGroup'\] > span:first-child \{[\s\S]*?background: var\(--deepcel-sheet\);[\s\S]*?user-select: text;/)
     expect(stylesheet).toMatch(
-      /\[class\*='headline'\]:has\(> \[class\*='headlineText'\]\) \{[\s\S]*?height: 24px;[\s\S]*?line-height: 23px;/,
+      /\[class\*='headline'\]:has\(> \[class\*='titleGroup'\]\) \{[\s\S]*?height: 24px;[\s\S]*?line-height: 23px;/,
     )
   })
 
-  it('projects the native session statistics into the workbook status bar', async () => {
+  it('retains the native session statistics controls in the composer dock', async () => {
     const inputRoot = document.createElement('div')
     const composer = document.createElement('div')
     composer.dataset.composerCard = ''
     const stats = document.createElement('div')
-    stats.textContent = '1 turn | LLM 2s | Input 1K tok'
+    stats.dataset.composerStats = ''
+    const pill = document.createElement('button')
+    pill.setAttribute('aria-haspopup', 'dialog')
+    pill.textContent = '1 turn | LLM 2s | Input 1K tok'
+    const openDetails = vi.fn()
+    pill.addEventListener('click', openDetails)
+    stats.append(pill)
     inputRoot.append(composer, stats)
     document.body.append(inputRoot)
 
     fiber = await mount()
     await new Promise(resolve => { setTimeout(resolve, 40) })
 
-    expect(stats.hasAttribute('data-deepcel-stats-source')).toBe(true)
-    expect(document.querySelector('[data-statistics-status]')?.textContent)
-      .toBe('1 turn | LLM 2s | Input 1K tok')
+    expect(stats.parentElement).toBe(inputRoot)
+    expect(stats.querySelector('button')).toBe(pill)
+    pill.click()
+    expect(openDetails).toHaveBeenCalledOnce()
   })
 
   it('uses absolute worksheet scroll coordinates and sizes messages to whole cells', async () => {
@@ -437,6 +496,60 @@ describe('Deepcel skin apply', () => {
     expect(flow.hasAttribute('data-deepcel-flow-container')).toBe(true)
     expect(composerSeat.hasAttribute('data-deepcel-composer-range')).toBe(true)
     expect(composerSeat.style.getPropertyValue('--deepcel-composer-rows')).toBe('1')
+  })
+
+  it('sizes 0.1.7 process groups as one stacked range without cellizing their steps', async () => {
+    const root = document.createElement('div')
+    root.id = 'root'
+    const phase = document.createElement('div')
+    phase.dataset.phase = 'active'
+    const scroll = document.createElement('div')
+    scroll.dataset.conversationScroll = ''
+    const flow = document.createElement('div')
+    flow.dataset.chatFlow = ''
+    const toggle = document.createElement('div')
+    toggle.dataset.chatFlowKind = 'turn-process'
+    const group = document.createElement('div')
+    group.dataset.stepProcess = 'true'
+    const heading = document.createElement('div')
+    const title = document.createElement('button')
+    title.setAttribute('aria-expanded', 'true')
+    title.setAttribute('aria-controls', 'group-body')
+    heading.append(title)
+    heading.getBoundingClientRect = () => new DOMRect(0, 0, 720, 24)
+    const body = document.createElement('div')
+    body.id = 'group-body'
+    body.dataset.stepProcessBody = 'true'
+    body.getBoundingClientRect = () => new DOMRect(0, 24, 720, 70)
+    const content = document.createElement('div')
+    content.dataset.stepProcessContent = 'true'
+    content.dataset.chatFlow = ''
+    const step = document.createElement('div')
+    step.dataset.chatFlowKind = 'assistant-step'
+    const thought = document.createElement('p')
+    thought.textContent = 'Reasoning inside the group'
+    step.append(thought)
+    content.append(step)
+    body.append(content)
+    group.append(heading, body)
+    flow.append(toggle, group)
+    scroll.append(flow)
+    phase.append(scroll)
+    root.append(phase)
+    document.body.append(root)
+
+    fiber = await mount()
+    await new Promise(resolve => { setTimeout(resolve, 40) })
+
+    // 24px heading + 70px body round up to four whole rows.
+    expect(group.hasAttribute('data-deepcel-message-range')).toBe(true)
+    expect(group.style.getPropertyValue('--deepcel-message-rows')).toBe('4')
+    expect(step.hasAttribute('data-deepcel-message-range')).toBe(false)
+    expect(thought.hasAttribute('data-deepcel-content-cell')).toBe(false)
+
+    await fiber.dispose()
+    expect(group.hasAttribute('data-deepcel-message-range')).toBe(false)
+    expect(group.style.getPropertyValue('--deepcel-message-rows')).toBe('')
   })
 
   it('places produced files and message actions on consecutive worksheet rows', async () => {
@@ -572,7 +685,9 @@ describe('Deepcel skin apply', () => {
     for (const listener of locale.listeners) listener()
     expect(status?.textContent).toBe('中文')
     expect(document.querySelector('[data-skin-control="ribbon-file"]')?.textContent).toBe('文件')
-    expect(document.querySelector('[data-skin-control="ribbon-manage"]')?.textContent).toBe('管理')
+    expect(document.querySelector('[data-skin-control="ribbon-home"]')?.textContent).toBe('开始')
+    expect(document.querySelector('[data-skin-control="ribbon-view"]')?.textContent).toBe('视图')
+    expect(document.querySelector('[data-ready-status]')?.textContent).toBe('就绪')
     expect(document.querySelector('[data-skin-control="new-workbook"]')?.textContent).toBe('+ 工作簿')
     expect(document.querySelector('[data-workbook-key][data-active] [role="tab"]')?.textContent).toBe('新建工作簿')
   })
@@ -597,12 +712,17 @@ describe('Deepcel skin apply', () => {
     expect(document.querySelectorAll('[data-deepcel-native-proxy]')).toHaveLength(4)
 
     document.querySelector<HTMLButtonElement>('[data-skin-control="sidebar"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-skin-control="quick-sidebar"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-skin-control="quick-new-session"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-skin-control="ribbon-file"]')?.click()
     document.querySelector<HTMLButtonElement>('[data-skin-control="new-session"]')?.click()
     document.querySelector<HTMLButtonElement>('[data-skin-control="new-workspace"]')?.click()
     document.querySelector<HTMLButtonElement>('[data-skin-control="settings"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-skin-control="ribbon-view"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-skin-control="view-sidebar"]')?.click()
 
-    expect(layout.toggles).toBe(1)
-    expect(nativeEntries.map(entry => entry.clicks)).toEqual([0, 1, 1, 1])
+    expect(layout.toggles).toBe(3)
+    expect(nativeEntries.map(entry => entry.clicks)).toEqual([0, 2, 1, 1])
 
     await fiber.dispose()
     expect(document.querySelectorAll('[data-deepcel-native-proxy]')).toHaveLength(0)
@@ -620,18 +740,7 @@ describe('Deepcel skin apply', () => {
     sessionRow.addEventListener('click', () => { sessionOpens += 1 })
     const phase = document.createElement('div')
     phase.dataset.phase = 'active'
-    const header = document.createElement('header')
-    const titleRow = document.createElement('div')
-    const navigation = document.createElement('nav')
-    const title = document.createElement('button')
-    title.disabled = true
-    title.textContent = 'Workbook Alpha'
-    navigation.append(title)
-    titleRow.append(navigation, document.createElement('div'))
-    header.append(titleRow)
-    const headerSlot = document.createElement('div')
-    headerSlot.dataset.slot = 'conversation.session.header'
-    headerSlot.append(header)
+    const { slot: headerSlot, header } = makeResidentHeader('Workbook Alpha')
     phase.append(headerSlot)
     root.append(sessionRow, phase)
     const nativeNewSession = document.createElement('button')
@@ -643,7 +752,7 @@ describe('Deepcel skin apply', () => {
     fiber = await mount(makeLocale(), makeLayout(), sessions)
     await new Promise(resolve => { setTimeout(resolve, 50) })
 
-    expect(document.querySelector('[data-skin-control="ribbon-home"]')?.hasAttribute('hidden')).toBe(false)
+    expect(header.hasAttribute('data-deepcel-header-source')).toBe(true)
     expect([...document.querySelectorAll('[data-workbook-key] [role="tab"]')].map(tab => tab.textContent))
       .toEqual(['Workbook Alpha'])
 
@@ -672,13 +781,7 @@ describe('Deepcel skin apply', () => {
     root.id = 'root'
     const phase = document.createElement('div')
     phase.dataset.phase = 'active'
-    const header = document.createElement('header')
-    const titleRow = document.createElement('div')
-    const navigation = document.createElement('nav')
-    const title = document.createElement('button')
-    title.disabled = true
-    title.textContent = '你好'
-    navigation.append(title)
+    const { slot: headerSlot, header, titleRow } = makeResidentHeader('你好')
     const actions = document.createElement('div')
     const mode = document.createElement('span')
     mode.textContent = '标准模式'
@@ -687,9 +790,10 @@ describe('Deepcel skin apply', () => {
     let regenerations = 0
     regenerate.addEventListener('click', () => { regenerations += 1 })
     actions.append(mode, regenerate)
-    titleRow.append(navigation, actions)
+    titleRow.append(actions)
     const tabList = document.createElement('div')
     tabList.setAttribute('role', 'tablist')
+    tabList.dataset.conversationTabs = ''
     const viewClicks = [0, 0, 0]
     for (const [index, label] of ['Chat', '轨迹', 'Timeline'].entries()) {
       const tab = document.createElement('button')
@@ -699,7 +803,7 @@ describe('Deepcel skin apply', () => {
       tab.addEventListener('click', () => { viewClicks[index] = (viewClicks[index] ?? 0) + 1 })
       tabList.append(tab)
     }
-    header.append(titleRow, tabList)
+    titleRow.parentElement?.append(tabList)
     const composer = document.createElement('div')
     composer.dataset.composerCard = ''
     const textarea = document.createElement('div')
@@ -727,9 +831,6 @@ describe('Deepcel skin apply', () => {
     const composerSeat = document.createElement('div')
     composerSeat.dataset.composerSeat = ''
     composerSeat.append(composer)
-    const headerSlot = document.createElement('div')
-    headerSlot.dataset.slot = 'conversation.session.header'
-    headerSlot.append(header)
     phase.append(headerSlot, composerSeat)
     root.append(phase)
     document.body.append(root)
@@ -738,9 +839,14 @@ describe('Deepcel skin apply', () => {
     await new Promise(resolve => { setTimeout(resolve, 40) })
 
     expect(document.querySelector('[data-skin-control="ribbon-home"]')?.hasAttribute('data-active')).toBe(true)
-    expect(document.querySelector('[data-skin-control="ribbon-home"]')?.hasAttribute('hidden')).toBe(false)
     expect(document.querySelector('[data-workbook-key][data-active] [role="tab"]')?.textContent).toBe('你好')
-    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [role="tab"]')].map(tab => tab.textContent))
+    // Home carries the run options: model, thinking and permission dropdowns.
+    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [class*="toolRow"] [aria-haspopup="menu"]')]
+      .map(cell => cell.getAttribute('aria-label')))
+      .toEqual(['Model: DeepSeek V4', 'Thinking: Max', 'Permission: Full access'])
+    expect(document.querySelector('[data-skin-chrome="workbook"] [role="group"]')?.getAttribute('aria-label')).toBe('Run')
+    document.querySelector<HTMLButtonElement>('[data-skin-control="ribbon-view"]')?.click()
+    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [class*="toolRow"] [role="tab"]')].map(tab => tab.textContent))
       .toEqual(['Chat', '轨迹', 'Timeline'])
     expect(header.hasAttribute('data-deepcel-header-source')).toBe(true)
     const projectedTitle = document.querySelector('[data-skin-chrome="workbook"] [class*="titleCell"]')
@@ -748,7 +854,7 @@ describe('Deepcel skin apply', () => {
     expect(regenerate.closest('header')).toBe(header)
     expect(document.querySelector('[data-header-controls]')).toBeNull()
 
-    document.querySelectorAll<HTMLButtonElement>('[data-skin-chrome="workbook"] [role="tab"]')[2]?.click()
+    document.querySelectorAll<HTMLButtonElement>('[data-skin-chrome="workbook"] [class*="toolRow"] [role="tab"]')[2]?.click()
     regenerate.click()
     expect(viewClicks).toEqual([0, 0, 1])
     expect(regenerations).toBe(1)
@@ -763,15 +869,12 @@ describe('Deepcel skin apply', () => {
     Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 28 })
     textarea.dispatchEvent(new Event('input', { bubbles: true }))
     expect(document.body.style.getPropertyValue('--deepcel-formula-height')).toBe('28px')
-    expect(document.querySelector('[data-skin-control="permission"]')).toBeNull()
-
-    document.querySelector<HTMLButtonElement>('[data-skin-control="ribbon-manage"]')?.click()
-    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [class*="toolRow"] > [class*="toolCell"]')].map(cell => cell.textContent))
-      .toEqual(['Permission: Full access', 'Model: DeepSeek V4', 'Thinking: Max'])
 
     document.querySelector<HTMLButtonElement>('[data-skin-control="ribbon-file"]')?.click()
-    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [class*="toolRow"] > [class*="toolCell"]')].map(cell => cell.textContent))
-      .toEqual(['New workspace', 'New session', 'Settings'])
+    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [class*="toolRow"] [class*="toolCell"]')].map(cell => cell.textContent))
+      .toEqual(['New session', 'New workspace', 'Settings'])
+    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [role="group"]')].map(group => group.getAttribute('aria-label')))
+      .toEqual(['New', 'Options'])
   })
 
   it('keeps the File settings control visible and toggles the native panel closed', async () => {
@@ -787,6 +890,7 @@ describe('Deepcel skin apply', () => {
       const overlay = document.createElement('div')
       const dialog = document.createElement('div')
       dialog.setAttribute('role', 'dialog')
+      dialog.dataset.shortcutModal = 'settings'
       const header = document.createElement('div')
       header.className = 'native_header_hash'
       const close = document.createElement('button')
@@ -808,11 +912,12 @@ describe('Deepcel skin apply', () => {
 
     fiber = await mount()
     await new Promise(resolve => { setTimeout(resolve, 30) })
+    document.querySelector<HTMLButtonElement>('[data-skin-control="ribbon-file"]')?.click()
     const proxy = document.querySelector<HTMLButtonElement>('[data-skin-control="settings"]')
     proxy?.click()
     await new Promise(resolve => { setTimeout(resolve, 30) })
     expect(proxy?.isConnected).toBe(true)
-    expect(proxy?.getAttribute('aria-pressed')).toBe('true')
+    expect(proxy?.getAttribute('aria-expanded')).toBe('true')
     expect(document.querySelector('[role="dialog"]')).not.toBeNull()
 
     proxy?.click()
@@ -820,11 +925,11 @@ describe('Deepcel skin apply', () => {
     expect(opens).toBe(1)
     expect(closes).toBe(1)
     expect(proxy?.isConnected).toBe(true)
-    expect(proxy?.getAttribute('aria-pressed')).toBe('false')
+    expect(proxy?.getAttribute('aria-expanded')).toBe('false')
     expect(document.querySelector('[role="dialog"]')).toBeNull()
   })
 
-  it('moves new-session workspace and preset choices into the Manage ribbon', async () => {
+  it('applies new-session workspace and preset values from Home ribbon dropdowns', async () => {
     const root = document.createElement('div')
     root.id = 'root'
     const phase = document.createElement('div')
@@ -885,28 +990,30 @@ describe('Deepcel skin apply', () => {
     await new Promise(resolve => { setTimeout(resolve, 50) })
     expect(heroRow.hasAttribute('data-deepcel-hero-choice-source')).toBe(true)
 
-    document.querySelector<HTMLButtonElement>('[data-skin-control="ribbon-manage"]')?.click()
-    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [class*="toolRow"] > [class*="toolCell"]')]
-      .slice(0, 2).map(cell => cell.textContent))
+    expect([...document.querySelectorAll('[data-skin-chrome="workbook"] [class*="toolRow"] [aria-haspopup="menu"]')]
+      .slice(0, 2).map(cell => cell.getAttribute('aria-label')))
       .toEqual(['Workspace: Project A', 'Agent preset: Standard'])
 
-    document.querySelector<HTMLButtonElement>('[data-skin-control="workspace"]')?.click()
+    const workspaceCell = document.querySelector<HTMLButtonElement>('[data-skin-control="workspace"]')
+    workspaceCell?.click()
     await new Promise(resolve => { setTimeout(resolve, 180) })
-    const workspaceDialog = document.querySelector<HTMLElement>('[data-deepcel-choice-dialog="workspace"]')
-    const workspaceSelect = workspaceDialog?.querySelector<HTMLSelectElement>('select')
-    expect([...workspaceSelect?.options ?? []].map(option => option.value)).toEqual(['Project A', 'Project B'])
-    if (workspaceSelect !== null && workspaceSelect !== undefined) workspaceSelect.value = 'Project B'
-    workspaceDialog?.querySelector<HTMLButtonElement>('[data-skin-control="choice-confirm"]')?.click()
+    expect(workspaceCell?.getAttribute('aria-expanded')).toBe('true')
+    const workspaceMenu = document.querySelector<HTMLElement>('[data-deepcel-choice-menu="workspace"]')
+    const workspaceItems = [...workspaceMenu?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? []]
+    expect(workspaceItems.map(item => `${item.textContent}:${item.getAttribute('aria-checked')}`))
+      .toEqual(['Project A:true', 'Project B:false'])
+    expect(document.activeElement).toBe(workspaceItems[0])
+    workspaceItems[1]?.click()
     await new Promise(resolve => { setTimeout(resolve, 180) })
     expect(selections).toEqual(['workspace:Project B'])
+    expect(document.querySelector('[data-deepcel-choice-menu]')).toBeNull()
+    expect(workspaceCell?.getAttribute('aria-expanded')).toBe('false')
 
     document.querySelector<HTMLButtonElement>('[data-skin-control="preset"]')?.click()
     await new Promise(resolve => { setTimeout(resolve, 180) })
-    const presetDialog = document.querySelector<HTMLElement>('[data-deepcel-choice-dialog="preset"]')
-    const presetSelect = presetDialog?.querySelector<HTMLSelectElement>('select')
-    expect([...presetSelect?.options ?? []].map(option => option.value)).toEqual(['Standard', 'Creator'])
-    if (presetSelect !== null && presetSelect !== undefined) presetSelect.value = 'Creator'
-    presetDialog?.querySelector<HTMLButtonElement>('[data-skin-control="choice-confirm"]')?.click()
+    const presetItems = [...document.querySelectorAll<HTMLButtonElement>('[data-deepcel-choice-menu="preset"] [role="menuitemradio"]')]
+    expect(presetItems.map(item => item.textContent)).toEqual(['Standard', 'Creator'])
+    presetItems[1]?.click()
     await new Promise(resolve => { setTimeout(resolve, 180) })
     expect(selections).toEqual(['workspace:Project B', 'preset:Creator'])
 
@@ -914,7 +1021,7 @@ describe('Deepcel skin apply', () => {
     expect(heroRow.hasAttribute('data-deepcel-hero-choice-source')).toBe(false)
   })
 
-  it('applies permission, model, and thinking choices only after dialog confirmation', async () => {
+  it('applies permission, model, and thinking values in one click and cancels with Escape', async () => {
     const root = document.createElement('div')
     root.id = 'root'
     const phase = document.createElement('div')
@@ -1001,32 +1108,35 @@ describe('Deepcel skin apply', () => {
 
     fiber = await mount()
     await new Promise(resolve => { setTimeout(resolve, 50) })
-    document.querySelector<HTMLButtonElement>('[data-skin-control="ribbon-manage"]')?.click()
+    const pick = async (kind: string, value: string): Promise<void> => {
+      document.querySelector<HTMLButtonElement>(`[data-skin-control="${kind}"]`)?.click()
+      await new Promise(resolve => { setTimeout(resolve, 180) })
+      const items = [...document.querySelectorAll<HTMLButtonElement>(`[data-deepcel-choice-menu="${kind}"] [role="menuitemradio"]`)]
+      items.find(item => item.textContent === value)?.click()
+      await new Promise(resolve => { setTimeout(resolve, 180) })
+    }
     document.querySelector<HTMLButtonElement>('[data-skin-control="permission"]')?.click()
     await new Promise(resolve => { setTimeout(resolve, 180) })
-    const permissionDialog = document.querySelector<HTMLElement>('[data-deepcel-choice-dialog="permission"]')
-    const permissionSelect = permissionDialog?.querySelector<HTMLSelectElement>('select')
-    expect([...permissionSelect?.options ?? []].map(option => option.value))
+    expect([...document.querySelectorAll('[data-deepcel-choice-menu="permission"] [role="menuitemradio"]')].map(item => item.textContent))
       .toEqual(['Read Only', 'Workspace Write', 'Full access'])
-    if (permissionSelect !== null && permissionSelect !== undefined) permissionSelect.value = 'Workspace Write'
-    permissionDialog?.querySelector<HTMLButtonElement>('[data-skin-control="choice-confirm"]')?.click()
-    await new Promise(resolve => { setTimeout(resolve, 180) })
-    expect(permissionSelections).toEqual(['Workspace Write'])
+    document.querySelector<HTMLButtonElement>('[data-skin-control="permission"]')?.click()
+    expect(document.querySelector('[data-deepcel-choice-menu]')).toBeNull()
 
-    document.querySelector<HTMLButtonElement>('[data-skin-control="model"]')?.click()
-    await new Promise(resolve => { setTimeout(resolve, 180) })
-    const modelDialog = document.querySelector<HTMLElement>('[data-deepcel-choice-dialog="model"]')
-    const modelSelect = modelDialog?.querySelector<HTMLSelectElement>('select')
-    expect([...modelSelect?.options ?? []].map(option => option.value)).toEqual(['Alpha', 'Beta'])
-    if (modelSelect !== null && modelSelect !== undefined) modelSelect.value = 'Beta'
-    modelDialog?.querySelector<HTMLButtonElement>('[data-skin-control="choice-confirm"]')?.click()
-    await new Promise(resolve => { setTimeout(resolve, 180) })
+    await pick('permission', 'Workspace Write')
+    expect(permissionSelections).toEqual(['Workspace Write'])
+    expect(document.querySelector('[data-skin-control="permission"]')?.getAttribute('aria-label')).toBe('Permission: Workspace Write')
+
+    await pick('model', 'Beta')
     expect(selections).toEqual(['model:Beta'])
 
-    document.querySelector<HTMLButtonElement>('[data-skin-control="thinking"]')?.click()
+    const thinking = document.querySelector<HTMLButtonElement>('[data-skin-control="thinking"]')
+    thinking?.click()
     await new Promise(resolve => { setTimeout(resolve, 180) })
-    const thinkingDialog = document.querySelector<HTMLElement>('[data-deepcel-choice-dialog="thinking"]')
-    thinkingDialog?.querySelector<HTMLButtonElement>('[data-skin-control="choice-cancel"]')?.click()
+    const menu = document.querySelector<HTMLElement>('[data-deepcel-choice-menu="thinking"]')
+    expect([...menu?.querySelectorAll('[role="menuitemradio"]') ?? []].map(item => item.textContent)).toEqual(['Low', 'Max'])
+    menu?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    expect(document.querySelector('[data-deepcel-choice-menu]')).toBeNull()
+    expect(document.activeElement).toBe(thinking)
     expect(selections).toEqual(['model:Beta'])
   })
 
@@ -1066,6 +1176,52 @@ describe('Deepcel skin apply', () => {
     expect(document.body.dataset.deepcelSidebar).toBe('open')
     expect(document.body.style.getPropertyValue('--deepcel-sidebar-offset')).toBe('280px')
     expect(document.body.style.getPropertyValue('--deepcel-composer-x')).toBe(composerX)
+  })
+
+  it('floats the Plugins page as an add-ins window and closes it back to the conversation', async () => {
+    const layout = makeLayout()
+    const sessions = makeSessions('session-alpha')
+    const root = document.createElement('div')
+    root.id = 'root'
+    const phase = document.createElement('div')
+    phase.dataset.phase = 'active'
+    const { slot: headerSlot } = makeResidentHeader('Workbook Alpha')
+    phase.append(headerSlot)
+    root.append(phase)
+    document.body.append(root)
+    fiber = await mount(makeLocale(), layout, sessions)
+    await new Promise(resolve => { setTimeout(resolve, 40) })
+    const caption = document.querySelector<HTMLElement>('[data-skin-chrome="addins"]')
+    expect(caption?.hidden).toBe(true)
+
+    // The global panel replaces the Conversation without changing the Session.
+    const panel = document.createElement('section')
+    panel.dataset.pluginPanel = ''
+    phase.replaceWith(panel)
+    await new Promise(resolve => { setTimeout(resolve, 40) })
+    expect(document.body.hasAttribute('data-deepcel-addins')).toBe(true)
+    expect(caption?.hidden).toBe(false)
+    expect(caption?.textContent).toContain('Add-ins')
+    expect([...document.querySelectorAll('[data-workbook-key] [role="tab"]')].map(tab => tab.textContent))
+      .toEqual(['Workbook Alpha'])
+
+    // Escape waits while a dialog inside the window is open.
+    const dialog = document.createElement('div')
+    dialog.setAttribute('aria-modal', 'true')
+    document.body.append(dialog)
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(layout.panels).toEqual([])
+    dialog.remove()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(layout.panels).toEqual([null])
+    document.querySelector<HTMLButtonElement>('[data-skin-control="close-addins"]')?.click()
+    expect(layout.panels).toEqual([null, null])
+
+    await fiber.dispose()
+    expect(document.body.hasAttribute('data-deepcel-addins')).toBe(false)
+    expect(document.querySelector('[data-skin-chrome="addins"]')).toBeNull()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(layout.panels).toEqual([null, null])
   })
 
   it('pins the workbook title without clobbering a later session title', async () => {

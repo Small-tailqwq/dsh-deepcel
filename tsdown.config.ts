@@ -1,7 +1,7 @@
 import { Rolldown, type UserConfig } from 'tsdown'
 import { clientBundle } from '../../shared/tsdown.client.ts'
 
-const ID = '@dsh-external/dsh-client-ui-skin-deepcel'
+const ID = '@smalltailqwq/dsh-client-ui-skin-deepcel'
 
 export default (): UserConfig[] => clientBundle(ID, ['src/index.ts'])().map(config => config.name === `${ID}/client`
   ? {

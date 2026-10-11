@@ -77,6 +77,7 @@
     "preview",
     "locale/*.json",
     "assets/plugin-icon.svg",
+    "assets/icons/deepcel.ico",
     "LICENSE",
     "NOTICE.md",
     "README.md",

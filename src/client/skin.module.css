@@ -25,6 +25,9 @@ body[data-dsh-deepcel] {
   --deepcel-sheet-origin: calc(var(--deepcel-sidebar-offset) + var(--deepcel-row-gutter));
   --deepcel-formula-height: 28px;
   --deepcel-ribbon-height: 136px;
+  --deepcel-title-height: 30px;
+  --deepcel-caption-inset-end: 0px;
+  --deepcel-account-width: 0px;
   --dsw-font-family: Aptos, Calibri, 'Segoe UI', 'Microsoft YaHei', sans-serif;
   --ds-font-family-code: Consolas, 'SFMono-Regular', monospace;
   --dsw-alias-bg-base: #fff;
@@ -135,6 +138,78 @@ body[data-dsh-deepcel] ::selection {
   background: var(--deepcel-highlight);
 }
 
+/* Windows desktop (DSH 0.2.0) paints a 40px caption over the page top: the
+   native window buttons at the right and the application/edit menubar
+   (`body > [data-windows-menu]`, z-index 1100) at the left. The workbook
+   title row becomes that caption, Excel-style: it grows to the caption
+   height, drags the window, keeps its native header actions clear of the
+   window buttons (apply() measures them into --deepcel-caption-inset-end),
+   lifts the menubar after Quick Access, and recolours the
+   buttons through the shell's caption colour probe. The frame's own caption
+   band and entry-page clearance are already covered by the ribbon. */
+html[data-windows-titlebar] body[data-dsh-deepcel] {
+  --deepcel-title-height: max(30px, var(--dsh-windows-titlebar-height, 40px));
+  --dsh-frame-top-clearance: 0px;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] .titleRow {
+  padding-right: var(--deepcel-caption-inset-end);
+}
+
+/* Only the free stretch of the title row drags the window: Electron resolves
+   overlapping app-regions by document order, and the header actions and the
+   account picture projected from #root precede this chrome. */
+body[data-dsh-deepcel] .titleDrag {
+  position: absolute;
+  top: 0;
+  right: var(--deepcel-drag-end, 0px);
+  bottom: 0;
+  left: var(--deepcel-drag-start, 0px);
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] .titleDrag {
+  -webkit-app-region: drag;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] .titleDrag[data-drag-recall] {
+  -webkit-app-region: no-drag;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] :is(.titleRow button, [data-deepcel-header-source]) {
+  -webkit-app-region: no-drag;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] > [data-windows-menu] {
+  --dsw-alias-label-primary: #fff;
+  --dsw-alias-label-secondary: rgb(255 255 255 / 86%);
+  --dsw-alias-interactive-bg-hover: rgb(255 255 255 / 16%);
+  z-index: 1000003;
+  font-family: Aptos, Calibri, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+/* The shell reads the caption button colours from this probe's computed
+   background and text colour. */
+html[data-windows-titlebar] body[data-dsh-deepcel] > span[style*='--dsw-specific-sidebar-fill'] {
+  --dsw-specific-sidebar-fill: var(--deepcel-green);
+  --dsw-alias-label-primary: #fff;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] :global(#root) [class*='frame']:has(> [class*='sidebarCol']) {
+  padding-top: 0 !important;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] :global(#root) [class*='frame']:has(> [class*='sidebarCol'])::before {
+  content: none !important;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] [class*='centerCol'] {
+  border-radius: 0 !important;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] [class*='handle'][data-side] {
+  top: 0 !important;
+}
+
 /* The plugin chrome reconstructs a compact ribbon, formula bar, column
    headers, sheet tabs, and a status strip entirely from text cells. */
 body[data-dsh-deepcel] .workbookChrome {
@@ -142,7 +217,7 @@ body[data-dsh-deepcel] .workbookChrome {
   inset: 0 0 auto;
   z-index: 1000000;
   display: grid;
-  grid-template-rows: 30px 25px 34px var(--deepcel-formula-height) 19px;
+  grid-template-rows: var(--deepcel-title-height) 25px 34px var(--deepcel-formula-height) 19px;
   height: var(--deepcel-ribbon-height);
   color: #202020;
   background: #fff;
@@ -313,8 +388,14 @@ body[data-dsh-deepcel] button.quickCell:is(:hover, :focus-visible) {
   background: rgba(255, 255, 255, 0.16);
 }
 
+/* A pressed title-row toggle reads as a darker cell, like Excel's own
+   caption toggles, instead of a white rule under its label. */
 body[data-dsh-deepcel] button.quickCell[aria-pressed='true'] {
-  box-shadow: inset 0 -2px #fff;
+  background: var(--deepcel-green-dark);
+}
+
+body[data-dsh-deepcel] button.quickCell[aria-pressed='true']:is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--deepcel-green-dark) 82%, #fff);
 }
 
 body[data-dsh-deepcel] button.quickCell:focus-visible {
@@ -518,7 +599,8 @@ body[data-dsh-deepcel] textarea[data-deepcel-formula-input]:focus {
   outline-offset: -2px !important;
 }
 
-body[data-dsh-deepcel][data-deepcel-model-probing] [role='menu'] {
+/* rc.2 drills the model list into a role=group card with a body-level backing. */
+body[data-dsh-deepcel][data-deepcel-model-probing] :is([role='menu'], [data-menu-material], [data-menu-backing]) {
   visibility: hidden !important;
 }
 
@@ -553,6 +635,27 @@ body[data-dsh-deepcel] .choiceHeading {
   background: var(--deepcel-header);
   font: 10px/1 Consolas, monospace;
   letter-spacing: 0.04em;
+}
+
+body[data-dsh-deepcel] .choiceGroup {
+  display: flex;
+  align-items: center;
+  height: var(--deepcel-row-height);
+  padding: 0 10px;
+  border-block: 1px solid var(--deepcel-grid);
+  margin-top: -1px;
+  color: var(--deepcel-ink);
+  background: var(--deepcel-header);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+body[data-dsh-deepcel] .choiceMenu > [role='group'] {
+  display: flex;
+  flex: none;
+  flex-direction: column;
 }
 
 body[data-dsh-deepcel] button.choiceItem {
@@ -604,6 +707,14 @@ body[data-dsh-deepcel] .choiceEmpty {
   color: var(--deepcel-muted);
 }
 
+/* A grown formula bar keeps the name box and fx on its first line, as Excel
+   does, instead of centring them against the expanded editor. */
+body[data-dsh-deepcel] .nameCell,
+body[data-dsh-deepcel] .formulaLabel {
+  align-items: flex-start;
+  line-height: 27px;
+}
+
 body[data-dsh-deepcel] .nameCell {
   justify-content: center;
   width: 72px;
@@ -615,7 +726,7 @@ body[data-dsh-deepcel] .formulaLabel {
   justify-content: center;
   width: 34px;
   color: #666;
-  font: italic 13px/1 Georgia, serif;
+  font: italic 13px/27px Georgia, serif;
 }
 
 body[data-dsh-deepcel] .formulaCell {
@@ -999,13 +1110,13 @@ body[data-dsh-deepcel] [data-pane='conversation'] header {
    and the view tabs to the View ribbon, so the header takes no sheet rows. */
 body[data-dsh-deepcel] [data-deepcel-header-source] {
   position: fixed !important;
-  inset: 0 0 auto auto !important;
+  inset: 0 calc(var(--deepcel-caption-inset-end) + var(--deepcel-account-width)) auto auto !important;
   z-index: 1000002 !important;
   display: flex !important;
   align-items: stretch;
-  max-width: calc(100vw - 180px);
-  height: 30px;
-  min-height: 30px !important;
+  max-width: calc(100vw - 180px - var(--deepcel-caption-inset-end) - var(--deepcel-account-width));
+  height: var(--deepcel-title-height);
+  min-height: var(--deepcel-title-height) !important;
   padding: 0 !important;
   border: 0 !important;
   color: #fff;
@@ -1038,8 +1149,8 @@ body[data-dsh-deepcel] [data-deepcel-header-source] :is([class*='titleRow'], [da
   align-items: center;
   width: auto;
   min-width: 0;
-  height: 30px;
-  min-height: 30px;
+  height: var(--deepcel-title-height);
+  min-height: var(--deepcel-title-height);
   margin: 0;
   padding: 0;
   gap: 0;
@@ -1054,7 +1165,7 @@ body[data-dsh-deepcel] [data-deepcel-header-source] [class*='headerActions'] > *
   border-left: 1px solid rgb(255 255 255 / 22%);
   color: #fff;
   font-size: 11px;
-  line-height: 30px;
+  line-height: var(--deepcel-title-height);
   white-space: nowrap;
 }
 
@@ -1067,7 +1178,7 @@ body[data-dsh-deepcel] [data-deepcel-header-source] :is([class*='headerActions']
 }
 
 body[data-dsh-deepcel] [data-deepcel-header-source] button:not(:where([role='menu'] *, [role='dialog'] *, [role='tree'] *)) {
-  min-height: 30px;
+  min-height: var(--deepcel-title-height);
   padding: 0 8px;
   border: 0;
   border-left: 1px solid rgb(255 255 255 / 22%);
@@ -1605,6 +1716,16 @@ body[data-dsh-deepcel] [data-deepcel-message-range][hidden='until-found'] {
   contain-intrinsic-size: 0;
 }
 
+/* A seat whose node renders nothing keeps its DOM position for turn lookup
+   without taking a worksheet row. */
+body[data-dsh-deepcel] [data-deepcel-message-range][data-deepcel-empty-seat] {
+  position: absolute;
+  height: 0;
+  overflow: hidden;
+  outline: 0 !important;
+  visibility: hidden;
+}
+
 /* A turn's process steps fold into group records (DSH 0.1.7). Each group is
    one merged range; its heading and every step inside it are 24px outline
    rows, like grouped worksheet rows with a +/- control, and opened step
@@ -1754,6 +1875,24 @@ body[data-dsh-deepcel] [data-chat-flow-kind]:is([data-chat-flow-kind='system-pro
   outline-offset: -1px;
 }
 
+/* DSH 0.2.0 moves the live run clock out of the turn header into one status
+   row after the transcript; it reads as the sheet's in-progress row. */
+body[data-dsh-deepcel] [data-chat-flow] > [data-chat-running][data-deepcel-message-range] {
+  flex-direction: row;
+  align-items: center;
+  height: var(--deepcel-row-height);
+  padding: 0 8px;
+  background: var(--deepcel-sheet);
+  outline: 1px solid var(--deepcel-grid-strong);
+  outline-offset: -1px;
+  color: var(--deepcel-green);
+  font: 12px/var(--deepcel-row-height) Aptos, Calibri, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+body[data-dsh-deepcel] [data-chat-running] > [class*='runningDivider'] {
+  display: none !important;
+}
+
 body[data-dsh-deepcel] button[data-turn-process] {
   box-sizing: border-box;
   width: 100%;
@@ -1807,8 +1946,11 @@ body[data-dsh-deepcel] li[data-deepcel-content-cell] {
   padding-left: 18px !important;
 }
 
+/* The row snap reserves the horizontal bar's height, so a merged code range
+   never needs a vertical bar. */
 body[data-dsh-deepcel] [class~='md-code-block'][data-deepcel-content-cell] {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* Markdown tables become a worksheet range: every record is exactly one
@@ -2462,7 +2604,7 @@ body[data-dsh-deepcel] :is([class*='bubble'], [data-terminal], [data-variant='th
   box-shadow: none !important;
 }
 
-body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble'] {
+body[data-dsh-deepcel] :is([class*='userRow'] [class*='userStack'], [data-question-reply]) > [class*='bubble'] {
   position: relative;
   box-sizing: border-box;
   width: min(420px, 100%);
@@ -2474,7 +2616,7 @@ body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble
   box-shadow: 2px 2px 0 color-mix(in srgb, var(--deepcel-grid-strong) 44%, transparent) !important;
 }
 
-body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble']::before {
+body[data-dsh-deepcel] :is([class*='userRow'] [class*='userStack'], [data-question-reply]) > [class*='bubble']::before {
   content: 'COMMENT';
   position: absolute;
   inset: 0 0 auto;
@@ -2488,7 +2630,7 @@ body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble
   letter-spacing: 0.08em;
 }
 
-body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble']::after {
+body[data-dsh-deepcel] :is([class*='userRow'] [class*='userStack'], [data-question-reply]) > [class*='bubble']::after {
   content: '';
   position: absolute;
   top: 22px;
@@ -2498,6 +2640,34 @@ body[data-dsh-deepcel] [class*='userRow'] [class*='userStack'] > [class*='bubble
   border-top: 1px solid var(--deepcel-comment-accent);
   background: linear-gradient(45deg, transparent 48%, var(--deepcel-comment-fill) 49%);
   transform: skewY(-35deg);
+}
+
+/* Sent images sit above the comment as embedded worksheet pictures. The
+   host's 64px gallery tile reads as an icon beside a 420px comment, so each
+   tile spans four rows and shows the whole picture inside a square cell frame. */
+body[data-dsh-deepcel] [class*='userRow'] [data-message-attachments] {
+  gap: 6px;
+}
+
+body[data-dsh-deepcel] [class*='userRow'] [data-message-attachments] button:is([data-variant='tile'], [data-variant='thumbnail']) {
+  box-sizing: border-box;
+  width: calc(var(--deepcel-row-height) * 4) !important;
+  height: calc(var(--deepcel-row-height) * 4) !important;
+  min-width: calc(var(--deepcel-row-height) * 4) !important;
+  min-height: calc(var(--deepcel-row-height) * 4) !important;
+  padding: 2px !important;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-radius: 0 !important;
+  background: var(--deepcel-header) !important;
+}
+
+body[data-dsh-deepcel] [class*='userRow'] [data-message-attachments] button[data-variant] img {
+  object-fit: contain !important;
+}
+
+body[data-dsh-deepcel] [class*='userRow'] [data-message-attachments] button[data-variant]:is(:hover, :focus-visible) {
+  border-color: var(--deepcel-green) !important;
+  box-shadow: inset 0 0 0 1px var(--deepcel-green) !important;
 }
 
 body[data-dsh-deepcel] :is([data-state='running'], [data-status='running']) {
@@ -2543,6 +2713,37 @@ body[data-dsh-deepcel] [role='dialog'] {
   border-top: 2px solid var(--deepcel-selection) !important;
   background: var(--deepcel-sheet) !important;
   box-shadow: none !important;
+}
+
+/* The account Platform page (Usage / Top up) is a full-window layer whose
+   viewport hosts a native WebContentsView sized from its DOM rect. The host
+   stacks it at 1001, under the Windows menubar (1100) but over the page; the
+   workbook chrome sits at 1000000, so it would cover the layer's return bar
+   while the layer marks it inert, leaving no way back. Restore the host order:
+   above every worksheet chrome, still under the lifted menubar. */
+body[data-dsh-deepcel] > [role='dialog'][aria-modal='true']:has(> header[data-window-drag]) {
+  z-index: 1000002;
+  border: 0 !important;
+  background: var(--deepcel-sheet) !important;
+}
+
+html[data-windows-titlebar] body[data-dsh-deepcel] > [role='dialog'][aria-modal='true']:has(> header[data-window-drag]) {
+  background:
+    linear-gradient(var(--deepcel-green) 0 var(--dsh-windows-titlebar-height, 40px), var(--deepcel-sheet) 0) !important;
+}
+
+body[data-dsh-deepcel] > [role='dialog'][aria-modal='true'] > header[data-window-drag] {
+  border-bottom: 1px solid var(--deepcel-grid-strong);
+  background: var(--deepcel-header);
+}
+
+body[data-dsh-deepcel] > [role='dialog'][aria-modal='true'] > header[data-window-drag] button {
+  border-radius: 0;
+  color: var(--deepcel-ink);
+}
+
+body[data-dsh-deepcel] > [role='dialog'][aria-modal='true'] > header[data-window-drag] button:is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--deepcel-highlight-solid) 45%, var(--deepcel-header));
 }
 
 /* ImageLightbox owns its image and close action; its full-screen seat is
@@ -3116,7 +3317,7 @@ body[data-dsh-deepcel] :global(#root) [data-phase] [data-deepcel-formula-owner] 
 
 body[data-dsh-deepcel] :global(#root) [data-phase] [data-composer-card] {
   position: fixed !important;
-  inset: 89px 0 auto 106px !important;
+  inset: calc(var(--deepcel-title-height) + 59px) 0 auto 106px !important;
   z-index: 1000002 !important;
   display: block !important;
   box-sizing: border-box !important;
@@ -3453,8 +3654,9 @@ body[data-dsh-deepcel] [data-side='rightbar']::after {
 /* The workspace opener owns a split button, with its menu beside the split.
    Only the two compact triggers inherit the workbook title-strip colors. */
 body[data-dsh-deepcel] [data-deepcel-header-source] [data-slot='conversation.session.header.utilities'] div:has(> button[aria-haspopup='menu']) {
-  height: 30px;
+  height: var(--deepcel-title-height);
   border: 0;
+  border-radius: 0;
   overflow: visible;
 }
 
@@ -3463,10 +3665,10 @@ body[data-dsh-deepcel] [data-deepcel-header-source] [data-slot='conversation.ses
   box-sizing: border-box;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  padding: 6px !important;
+  width: 36px;
+  min-width: 36px;
+  height: var(--deepcel-title-height);
+  padding: 0 !important;
   border: 0 !important;
   border-left: 1px solid rgb(255 255 255 / 22%) !important;
   color: #fff !important;
@@ -3496,6 +3698,34 @@ body[data-dsh-deepcel] [data-sidebar-right-expand] > svg {
   display: block !important;
 }
 
+/* Open in app: the application picture and its chooser arrow form one
+   title-row control — a 16px app icon cell and a narrow arrow half with no
+   rule between them. */
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-open-target] {
+  border-left: 1px solid rgb(255 255 255 / 22%) !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-open-target] > button,
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-open-target] > * > button {
+  border-left: 0 !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-open-target] button[aria-haspopup='menu'] {
+  width: 18px !important;
+  min-width: 18px !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-open-target] button:not([aria-haspopup]) :is(img, svg, [data-open-target-skeleton]) {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-open-target] button[aria-haspopup='menu'] svg {
+  width: 10px !important;
+  height: 10px !important;
+  opacity: .85;
+}
+
 body[data-dsh-deepcel] [data-deepcel-header-source] [role='menu'] {
   max-height: calc(100dvh - 64px);
   color: var(--deepcel-ink) !important;
@@ -3517,19 +3747,22 @@ body[data-dsh-deepcel] [data-deepcel-header-source] [role='menu'] svg {
 
 body[data-dsh-deepcel] [data-sidebar-right-expand] {
   box-sizing: border-box;
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  padding: 7px !important;
+  width: 36px;
+  min-width: 36px;
+  height: var(--deepcel-title-height);
+  padding: 0 10px !important;
 }
 
 /* Header icon buttons (more actions, right panel) keep their native glyph in
    white instead of a clipped aria-label projection. */
 body[data-dsh-deepcel] [data-deepcel-header-source] :is([class*='headerUtilities'], [data-conversation-header-corner]) button[aria-label] {
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  padding: 7px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  height: var(--deepcel-title-height);
+  padding: 0 !important;
   border: 0 !important;
   border-left: 1px solid rgb(255 255 255 / 22%) !important;
   color: #fff !important;
@@ -3746,6 +3979,183 @@ body[data-dsh-deepcel] [data-team-action] > [role='dialog'] button[aria-label]:h
 
 body[data-dsh-deepcel] [data-team-action] > [role='dialog'] button[aria-label] > svg {
   display: block !important;
+}
+
+/* Agent Teams (0.2.0 experimental profile) puts its trigger in the session
+   header. The skin hides it there and lays the same native trigger over the
+   Team slot of the Home ribbon (apply() measures the slot into
+   --deepcel-team-*), so its hover card anchors under the ribbon command. */
+body[data-dsh-deepcel] .teamSlot {
+  min-width: 104px;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action] {
+  display: none !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action][data-deepcel-team-projected] {
+  position: fixed !important;
+  top: var(--deepcel-team-y);
+  left: var(--deepcel-team-x);
+  z-index: 1000002;
+  display: flex !important;
+  width: var(--deepcel-team-w);
+  height: var(--deepcel-team-h);
+  -webkit-app-region: no-drag;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action][data-deepcel-team-projected] > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid #e1e1e1;
+  border-radius: 0;
+  color: #3b3b3b;
+  background: transparent;
+  font: 11px/1 Aptos, Calibri, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action][data-deepcel-team-projected] > button:hover {
+  background: var(--deepcel-green-soft);
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action][data-deepcel-team-projected] > button[aria-expanded='true'] {
+  color: var(--deepcel-green-dark);
+  background: var(--deepcel-green-soft);
+  box-shadow: inset 0 -2px var(--deepcel-selection);
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action][data-deepcel-team-projected] > button:focus-visible {
+  outline: 1px solid var(--deepcel-selection);
+  outline-offset: -3px;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action][data-deepcel-team-projected] > button::after {
+  content: none !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action][data-deepcel-team-projected] > button > svg {
+  display: block !important;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--deepcel-green-dark);
+}
+
+body[data-dsh-deepcel] [data-deepcel-header-source] [data-team-action][data-deepcel-team-projected] > button > span {
+  display: inline !important;
+  color: inherit;
+}
+
+body[data-dsh-deepcel] > [data-team-panel] {
+  z-index: 1000004 !important;
+  border: 1px solid var(--deepcel-grid-strong) !important;
+  border-top: 3px solid var(--deepcel-selection) !important;
+  border-radius: 0 !important;
+  box-shadow: 2px 2px 0 rgb(0 0 0 / 12%) !important;
+}
+
+body[data-dsh-deepcel] > [data-team-panel] button[aria-label]:has(> svg)::after {
+  content: none !important;
+}
+
+body[data-dsh-deepcel] > [data-team-panel] button[aria-label] > svg {
+  display: block !important;
+}
+
+/* DSH 0.2.0 desktop: the account launcher (settings.launcher) leaves the
+   sidebar foot for the right end of the title row, Excel-style, as a round
+   picture only. Its menu then opens below the title row. The anchor stays
+   visible and clickable while the collapsed sidebar is hidden. */
+body[data-dsh-deepcel] [data-deepcel-account-anchor] {
+  position: fixed !important;
+  top: 0;
+  right: var(--deepcel-caption-inset-end);
+  z-index: 1000002;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: var(--deepcel-account-width) !important;
+  height: var(--deepcel-title-height);
+  visibility: visible;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+body[data-dsh-deepcel] [data-deepcel-account-anchor] > button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 30px !important;
+  min-width: 0 !important;
+  height: 30px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  color: #fff !important;
+  background: transparent !important;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+body[data-dsh-deepcel] [data-deepcel-account-anchor] > button:is(:hover, [aria-expanded='true']) {
+  background: rgb(255 255 255 / 18%) !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-account-anchor] > button:focus-visible {
+  outline: 1px solid #fff !important;
+  outline-offset: 1px !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-account-anchor] > button::after {
+  content: none !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-account-anchor] > button > span:not([class*='avatar']) {
+  display: none !important;
+}
+
+body[data-dsh-deepcel] [data-deepcel-account-anchor] > button > [class*='avatar'] {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 50%;
+  color: #fff;
+  background: rgb(255 255 255 / 22%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 55%);
+}
+
+body[data-dsh-deepcel] [data-deepcel-account-anchor] > button > [class*='avatar'] > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+body[data-dsh-deepcel] [data-deepcel-account-anchor] > button svg {
+  display: block !important;
+  width: 16px;
+  height: 16px;
+  color: #fff;
+}
+
+body[data-dsh-deepcel] > [data-deepcel-account-menu] {
+  top: calc(var(--deepcel-title-height) + 2px) !important;
+  right: calc(var(--deepcel-caption-inset-end) + 4px) !important;
+  bottom: auto !important;
+  left: auto !important;
 }
 
 /* Schedule catalogs are native body portals with list semantics, unlike the

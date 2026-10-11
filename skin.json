@@ -24,6 +24,7 @@
     "light": "preview/light.webp",
     "dark": "preview/dark.webp"
   },
+  "desktopIcon": "assets/icons/deepcel.ico",
   "order": 6,
-  "dshCompatibility": "0.1.7rc2"
+  "dshCompatibility": "0.2.0rc2"
 }

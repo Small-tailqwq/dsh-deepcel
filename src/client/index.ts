@@ -19,10 +19,17 @@ const RIBBON_TABS = [
 ] as const
 type RibbonTabId = typeof RIBBON_TABS[number]['id']
 type ChoiceKind = 'workspace' | 'preset' | 'permission' | 'model' | 'thinking'
+/** One value of a skin choice menu; `group` is the native provider heading the value sits under. */
+interface ChoiceOption {
+  readonly label: string
+  readonly group?: string | undefined
+  readonly checked?: boolean
+}
 const CELL_WIDTH = 60
 const ROW_HEIGHT = 24
 const ROW_GUTTER = 40
 const RIBBON_HEIGHT = 136
+const TITLE_HEIGHT = 30
 const FORMULA_HEIGHT = 28
 const FORMULA_LINE_HEIGHT = 18
 const FORMULA_MAX_LINES = 6
@@ -39,17 +46,55 @@ const CONTENT_CELL_SELECTOR = [
    in the transcript flow; their members live in a nested flow inside the
    group body. Only top-level records own worksheet ranges. */
 const PROCESS_GROUP_SELECTOR = '[data-chat-flow] > [data-step-process]'
-const RECORD_SELECTOR = `[data-chat-flow-kind], ${PROCESS_GROUP_SELECTOR}`
+/* The transcript column also owns rows outside any business node: local and
+   pending-steering submission echoes, and (DSH 0.2.0) the live run clock.
+   Unclaimed, they would auto-place into the row-number gutter track. */
+const LOOSE_ROW_SELECTOR = "[data-chat-flow] > [class*='userRow'], [data-chat-flow] > [data-chat-running]"
+const RECORD_SELECTOR = `[data-chat-flow-kind], ${PROCESS_GROUP_SELECTOR}, ${LOOSE_ROW_SELECTOR}`
 
 /** The top-level worksheet record containing an element, if any. */
 function recordOf(element: Element | null | undefined): HTMLElement | null {
   const group = element?.closest<HTMLElement>('[data-step-process]')
   if (group?.parentElement?.closest('[data-step-process]') === null) return group
-  return element?.closest<HTMLElement>('[data-chat-flow-kind]') ?? null
+  return element?.closest<HTMLElement>('[data-chat-flow-kind]')
+    ?? element?.closest<HTMLElement>(LOOSE_ROW_SELECTOR)
+    ?? null
+}
+
+/* DSH 0.2.0 renders nothing for an open turn's process header (the run clock
+   moved to the status row) but keeps the seat; it must not claim a row. */
+function isEmptySeat(record: HTMLElement): boolean {
+  return record.matches('[data-chat-flow-kind]')
+    && record.textContent?.trim() === ''
+    && record.querySelector('img, svg, video, canvas, button, input, textarea') === null
 }
 
 function isTopLevelRecord(element: HTMLElement): boolean {
   return element.parentElement?.closest('[data-step-process]') === null
+}
+
+/**
+ * Extra title-row height on the Windows desktop shell (DSH 0.2.0), whose
+ * caption strip — native window buttons and the application/edit menubar —
+ * is painted over the top of the page; the workbook title row becomes it.
+ */
+function captionExtraHeight(): number {
+  const root = document.documentElement
+  if (!root.hasAttribute('data-windows-titlebar')) return 0
+  const caption = Number.parseFloat(root.style.getPropertyValue('--dsh-windows-titlebar-height'))
+  return Math.max(0, (Number.isFinite(caption) ? caption : 40) - TITLE_HEIGHT)
+}
+
+/** Width the Windows caption buttons cover at the right of the title row. */
+function captionInsetEnd(): number {
+  if (!document.documentElement.hasAttribute('data-windows-titlebar')) return 0
+  const overlay = (navigator as Navigator & {
+    windowControlsOverlay?: { visible: boolean, getTitlebarAreaRect(): DOMRect }
+  }).windowControlsOverlay
+  if (overlay === undefined) return 138
+  if (!overlay.visible) return 0
+  const area = overlay.getTitlebarAreaRect()
+  return Math.max(0, Math.ceil(window.innerWidth - area.x - area.width))
 }
 
 function currentRibbonHeight(): number {
@@ -80,9 +125,32 @@ interface LayoutPort {
   selectPanel?(panelId: string | null): void
 }
 
+/** 0.1.x published `current`; 0.2.0 marks the main view through `retainedBy.mainView`. */
+interface SessionListSnapshot {
+  readonly current?: string
+  readonly byId?: Readonly<Record<string, {
+    readonly id: string
+    readonly retainedBy?: Readonly<Partial<Record<string, number>>>
+  }>>
+}
+
 interface SessionsPort {
-  readonly list: { getSnapshot(): { current?: string } }
-  open(id: string): void
+  readonly list: { getSnapshot(): SessionListSnapshot }
+  /** 0.1.x only; 0.2.0 navigates through `uiWorkspace.openSession`. */
+  open?(id: string): void
+}
+
+interface UiWorkspacePort {
+  openSession(id: string): void
+}
+
+/** The Session open in the main view, in either list snapshot generation. */
+function currentSessionId(snapshot: SessionListSnapshot): string | undefined {
+  if (snapshot.current !== undefined) return snapshot.current
+  for (const summary of Object.values(snapshot.byId ?? {})) {
+    if ((summary.retainedBy?.mainView ?? 0) > 0) return summary.id
+  }
+  return undefined
 }
 
 interface ShellLabels {
@@ -111,6 +179,7 @@ interface ShellLabels {
   readonly groupRun: string
   readonly groupSheets: string
   readonly groupWindow: string
+  readonly groupTeam: string
   readonly empty: string
   readonly ready: string
   readonly quickAccess: string
@@ -123,6 +192,7 @@ interface WorkbookControls {
   readonly tools: HTMLDivElement
   readonly formulaCell: HTMLElement
   readonly titleCell: HTMLElement
+  readonly titleDrag: HTMLElement
   readonly quickNewSession: HTMLButtonElement
   readonly quickSidebar: HTMLButtonElement
   readonly newSession: HTMLButtonElement
@@ -190,7 +260,7 @@ function labelsFor(snapshot: LocaleSnapshot): ShellLabels {
       workspace: 'Workspace', preset: 'Agent preset',
       permission: 'Permission', model: 'Model', thinking: 'Thinking',
       groupNew: 'New', groupOptions: 'Options', groupTarget: 'Next session', groupRun: 'Run',
-      groupSheets: 'Sheets', groupWindow: 'Window', empty: 'No choices available', ready: 'Ready',
+      groupSheets: 'Sheets', groupWindow: 'Window', groupTeam: 'Team', empty: 'No choices available', ready: 'Ready',
       quickAccess: 'Quick access', addins: 'Add-ins', closeAddins: 'Close add-ins',
     }
   }
@@ -202,7 +272,7 @@ function labelsFor(snapshot: LocaleSnapshot): ShellLabels {
     workspace: '工作区', preset: 'Agent 预设',
     permission: '权限', model: '模型', thinking: '思考',
     groupNew: '新建', groupOptions: '选项', groupTarget: '新会话', groupRun: '运行',
-    groupSheets: '工作表', groupWindow: '窗口', empty: '暂无可选项', ready: '就绪',
+    groupSheets: '工作表', groupWindow: '窗口', groupTeam: '团队', empty: '暂无可选项', ready: '就绪',
     quickAccess: '快速访问', addins: '加载项', closeAddins: '关闭加载项',
   }
 }
@@ -228,17 +298,85 @@ function nativeSettingsTrigger(): HTMLButtonElement | undefined {
     })
 }
 
+/**
+ * DSH 0.2.0 desktop replaces the sidebar Settings launcher with an account
+ * menu whose first item opens Settings. Open it unseen and pick that item.
+ */
+function nativeAccountMenuTrigger(): HTMLButtonElement | undefined {
+  return [...document.querySelectorAll<HTMLButtonElement>("#root button[aria-haspopup='menu']:not([data-skin-control])")]
+    .find(button => !button.disabled && ['账号菜单', 'Account menu'].includes(button.getAttribute('aria-label') ?? ''))
+}
+
+/**
+ * The desktop account launcher, located by its signed-in/out state marker so
+ * the lookup does not depend on the menu's localized label.
+ */
+function nativeAccountTrigger(): HTMLButtonElement | undefined {
+  return document.querySelector<HTMLButtonElement>(
+    "#root button[aria-haspopup='menu'][data-signed-out]:not([data-skin-control])",
+  ) ?? undefined
+}
+
+/**
+ * The desktop caption menubar is an open shadow root whose own sheet fixes a
+ * 14px label and a rounded 28px hover pill. Deepcel appends one sheet so the
+ * Application/Edit entries read as flat title-row cells beside Quick Access.
+ */
+const WINDOWS_MENU_STYLE = `
+  [role=menubar] { align-self: stretch; gap: 0; height: 100%; }
+  button { height: 100%; padding: 0 12px; border-right: 1px solid rgb(255 255 255 / 22%);
+    border-radius: 0; color: #fff; font-family: Aptos, Calibri, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    font-size: 11px; }
+  button:hover { background: rgb(255 255 255 / 16%); color: #fff; }
+  button[aria-expanded=true] { background: #185c37; color: #fff; }
+  button:focus-visible { outline: 1px solid #fff; outline-offset: -4px; }
+`
+
+function styleWindowsMenu(): void {
+  const root = document.querySelector<HTMLElement>('body > [data-windows-menu]')?.shadowRoot
+  if (root === null || root === undefined || root.querySelector('style[data-deepcel-windows-menu]') !== null) return
+  const style = document.createElement('style')
+  style.dataset.deepcelWindowsMenu = ''
+  style.textContent = WINDOWS_MENU_STYLE
+  root.append(style)
+}
+
+function unstyleWindowsMenu(): void {
+  document.querySelector<HTMLElement>('body > [data-windows-menu]')?.shadowRoot
+    ?.querySelector('style[data-deepcel-windows-menu]')?.remove()
+}
+
+async function openSettingsFromAccountMenu(trigger: HTMLButtonElement): Promise<void> {
+  const before = new Set(document.querySelectorAll("[role='menu']"))
+  document.body.dataset.deepcelModelProbing = ''
+  trigger.click()
+  await afterPaint()
+  const item = [...document.querySelectorAll<HTMLElement>("[role='menu']")]
+    .filter(menu => !before.has(menu) && menu.closest('[data-skin-chrome]') === null)
+    .flatMap(menu => [...menu.querySelectorAll<HTMLElement>("[role='menuitem']")])
+    .find(candidate => /^(?:设置|Settings)/.test(candidate.textContent?.trim() ?? ''))
+  if (item === undefined) trigger.click()
+  else item.click()
+  await afterPaint()
+  delete document.body.dataset.deepcelModelProbing
+}
+
 function toggleNativeSettings(): void {
-  const trigger = nativeSettingsTrigger()
-  if (trigger?.getAttribute('aria-expanded') !== 'true') {
-    if (trigger !== undefined) trigger.click()
-    else clickNativeButton(['设置', 'Settings'], ['设置', 'Settings'])
-    return
-  }
   // DSH 0.1.7 portals the settings panel to body and tags it as the settings
   // shortcut modal; its close button carries only visually hidden text.
   const dialog = document.querySelector<HTMLElement>("[role='dialog'][data-shortcut-modal='settings']")
-  const close = [...dialog?.querySelectorAll<HTMLButtonElement>('button') ?? []]
+  if (dialog === null) {
+    const trigger = nativeSettingsTrigger()
+    if (trigger !== undefined) {
+      trigger.click()
+      return
+    }
+    const account = nativeAccountMenuTrigger()
+    if (account !== undefined) void openSettingsFromAccountMenu(account)
+    else clickNativeButton(['设置', 'Settings'], ['设置', 'Settings'])
+    return
+  }
+  const close = [...dialog.querySelectorAll<HTMLButtonElement>('button')]
     .find((button) => ['关闭', 'Close'].includes(button.textContent?.trim() ?? ''))
   close?.click()
 }
@@ -352,7 +490,7 @@ function controlledHeroChoiceMenu(trigger: HTMLButtonElement): HTMLElement | nul
     .findLast(menu => menu.querySelector("[role='menuitem'], [role='menuitemradio']") !== null) ?? null
 }
 
-async function heroChoices(kind: 'workspace' | 'preset'): Promise<string[]> {
+async function heroChoices(kind: 'workspace' | 'preset'): Promise<ChoiceOption[]> {
   const trigger = nativeHeroChoiceTrigger(kind)
   if (trigger === undefined || trigger.disabled) return []
   document.body.dataset.deepcelModelProbing = ''
@@ -368,7 +506,7 @@ async function heroChoices(kind: 'workspace' | 'preset'): Promise<string[]> {
   trigger.click()
   await afterPaint()
   delete document.body.dataset.deepcelModelProbing
-  return [...new Set(choices)]
+  return [...new Set(choices)].map(label => ({ label }))
 }
 
 async function applyHeroChoice(kind: 'workspace' | 'preset', label: string): Promise<void> {
@@ -400,7 +538,7 @@ function controlledPermissionMenu(trigger: HTMLButtonElement): HTMLElement | nul
     .find(menu => menu.querySelector("[role='menuitem'], [role='menuitemradio']") !== null) ?? null
 }
 
-async function permissionChoices(): Promise<string[]> {
+async function permissionChoices(): Promise<ChoiceOption[]> {
   const trigger = nativePermissionTrigger()
   if (trigger === undefined || trigger.disabled) return []
   document.body.dataset.deepcelModelProbing = ''
@@ -413,7 +551,7 @@ async function permissionChoices(): Promise<string[]> {
   trigger.click()
   await afterPaint()
   delete document.body.dataset.deepcelModelProbing
-  return choices
+  return choices.map(label => ({ label }))
 }
 
 async function applyPermissionChoice(label: string): Promise<void> {
@@ -430,7 +568,22 @@ async function applyPermissionChoice(label: string): Promise<void> {
   delete document.body.dataset.deepcelModelProbing
 }
 
-async function modelChoices(kind: 'model' | 'thinking'): Promise<string[]> {
+/** The provider heading that labels a native model row's group, if the row is grouped. */
+function menuChoiceGroup(button: HTMLButtonElement): string | undefined {
+  const headingId = button.closest<HTMLElement>("[role='group'][aria-labelledby]")?.getAttribute('aria-labelledby')
+  const heading = headingId === null || headingId === undefined ? null : document.getElementById(headingId)
+  return heading?.textContent?.trim() || undefined
+}
+
+function nativeModelOption(button: HTMLButtonElement): ChoiceOption {
+  return {
+    label: menuChoiceLabel(button),
+    group: menuChoiceGroup(button),
+    checked: button.getAttribute('aria-checked') === 'true',
+  }
+}
+
+async function modelChoices(kind: 'model' | 'thinking'): Promise<ChoiceOption[]> {
   const trigger = nativeModelTrigger()
   if (trigger === undefined || trigger.disabled) return []
   document.body.dataset.deepcelModelProbing = ''
@@ -441,15 +594,15 @@ async function modelChoices(kind: 'model' | 'thinking'): Promise<string[]> {
   rows[kind === 'model' ? 0 : 1]?.click()
   await afterPaint()
   const choices = [...rootMenu?.querySelectorAll<HTMLButtonElement>("button[role='menuitemradio']") ?? []]
-    .map(menuChoiceLabel)
-    .filter(Boolean)
+    .map(nativeModelOption)
+    .filter(choice => choice.label !== '')
   trigger.click()
   await afterPaint()
   delete document.body.dataset.deepcelModelProbing
   return choices
 }
 
-async function applyModelChoice(kind: 'model' | 'thinking', label: string): Promise<void> {
+async function applyModelChoice(kind: 'model' | 'thinking', target: ChoiceOption): Promise<void> {
   const trigger = nativeModelTrigger()
   if (trigger === undefined || trigger.disabled) return
   document.body.dataset.deepcelModelProbing = ''
@@ -459,9 +612,14 @@ async function applyModelChoice(kind: 'model' | 'thinking', label: string): Prom
   const rows = [...rootMenu?.querySelectorAll<HTMLButtonElement>("button[role='menuitem']") ?? []]
   rows[kind === 'model' ? 0 : 1]?.click()
   await afterPaint()
+  // Providers can list the same model name; the heading picks the provider.
   const choice = [...rootMenu?.querySelectorAll<HTMLButtonElement>("button[role='menuitemradio']") ?? []]
-    .find(button => menuChoiceLabel(button) === label)
+    .find((button) => {
+      const option = nativeModelOption(button)
+      return option.label === target.label && option.group === target.group
+    })
   choice?.click()
+  if (choice === undefined) trigger.click()
   await afterPaint()
   delete document.body.dataset.deepcelModelProbing
 }
@@ -594,6 +752,7 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
     }
     message.style.setProperty('--deepcel-message-rows', String(height / ROW_HEIGHT))
     message.dataset.deepcelMessageRange = ''
+    message.toggleAttribute('data-deepcel-empty-seat', isEmptySeat(message))
   }
 
   const clearMessageCells = (message: HTMLElement): void => {
@@ -612,7 +771,15 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
   const sizeContentCell = (cell: HTMLElement): void => {
     cell.dataset.deepcelContentCell = ''
     cell.style.removeProperty('--deepcel-content-cell-height')
-    const contentHeight = Math.max(cell.scrollHeight, cell.getBoundingClientRect().height)
+    // scrollHeight omits a classic horizontal scrollbar; reserve its band so
+    // a wide table or code block does not cover its last line.
+    const style = getComputedStyle(cell)
+    const scrollbarHeight = style.overflowX === 'auto' || style.overflowX === 'scroll'
+      ? Math.max(0, cell.offsetHeight - cell.clientHeight
+        - (Number.parseFloat(style.borderTopWidth) || 0)
+        - (Number.parseFloat(style.borderBottomWidth) || 0))
+      : 0
+    const contentHeight = Math.max(cell.scrollHeight + scrollbarHeight, cell.getBoundingClientRect().height)
     const height = Math.max(ROW_HEIGHT, Math.ceil(contentHeight / ROW_HEIGHT) * ROW_HEIGHT)
     cell.style.setProperty('--deepcel-content-cell-height', `${height}px`)
     cell.style.setProperty('--deepcel-content-cell-rows', String(height / ROW_HEIGHT))
@@ -626,7 +793,9 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
     // A process group is one merged range; its disclosure rows keep their own layout.
     if (message.matches('[data-step-process]')) return
     if (message.matches("[data-chat-flow-kind='system-prompt'], [data-chat-flow-kind='context']")) return
-    if (message.querySelector("[class*='userRow']") !== null) return
+    if (message.matches("[class*='userRow'], [data-chat-running]")) return
+    // A user's answer to a question (DSH 0.2.0 `question-reply`) is one comment, like a user row.
+    if (message.querySelector("[class*='userRow'], [data-question-reply]") !== null) return
 
     const producedFilesRoot = message.querySelector<HTMLElement>('[data-produced-files-row]')?.parentElement
     const shellSummary = message.querySelector<HTMLElement>("[data-sample='bash'][data-variant='bash']")
@@ -702,6 +871,7 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
       unobserveRecord(message)
       clearMessageCells(message)
       delete message.dataset.deepcelMessageRange
+      delete message.dataset.deepcelEmptySeat
       message.style.removeProperty('--deepcel-message-height')
       message.style.removeProperty('--deepcel-message-rows')
     }
@@ -1013,6 +1183,7 @@ function createWorksheetSurface(nameCell: HTMLSpanElement, rows: HTMLDivElement)
       for (const message of messageElements) {
         clearMessageCells(message)
         delete message.dataset.deepcelMessageRange
+        delete message.dataset.deepcelEmptySeat
         message.style.removeProperty('--deepcel-message-height')
         message.style.removeProperty('--deepcel-message-rows')
       }
@@ -1058,7 +1229,12 @@ function createWorkbookChrome(): {
   const quickSidebar = makeControl('quickCell', 'quick-sidebar')
   quickAccess.append(quickSidebar, quickNewSession)
   const titleCell = makeCell('titleCell', 'DSH Workbook')
-  titleRow.append(quickAccess, titleCell)
+  // Window drag band of the desktop caption; apply() keeps it between the
+  // caption menubar and the projected header actions.
+  const titleDrag = document.createElement('div')
+  titleDrag.className = cls('titleDrag')
+  titleDrag.setAttribute('aria-hidden', 'true')
+  titleRow.append(titleDrag, quickAccess, titleCell)
 
   const tabs = document.createElement('div')
   tabs.className = cls('ribbonTabs')
@@ -1122,7 +1298,7 @@ function createWorkbookChrome(): {
     chrome,
     columns,
     controls: {
-      ribbonTabs, tools, formulaCell, titleCell, quickNewSession, quickSidebar,
+      ribbonTabs, tools, formulaCell, titleCell, titleDrag, quickNewSession, quickSidebar,
       newSession, newWorkspace, settings, sidebar, rightbar,
       workspace, preset, permission, model, thinking,
     },
@@ -1236,9 +1412,9 @@ function createChoiceMenu(
   kind: ChoiceKind,
   anchor: HTMLElement,
   labels: ShellLabels,
-  choices: readonly string[],
+  choices: readonly ChoiceOption[],
   current: string,
-  onPick: (choice: string) => void,
+  onPick: (choice: ChoiceOption) => void,
   onClose: (restoreFocus: boolean) => void,
 ): HTMLDivElement {
   const menu = document.createElement('div')
@@ -1252,13 +1428,32 @@ function createChoiceMenu(
   heading.setAttribute('aria-hidden', 'true')
   heading.textContent = labels[kind]
   menu.append(heading)
+  // Native checks win: a model name can repeat across providers, so only the
+  // row the host marks is current.
+  const nativeChecks = choices.some(choice => choice.checked !== undefined)
+  let group: HTMLElement = menu
+  let groupName: string | undefined
   const items = choices.map((choice, index) => {
+    if (choice.group !== undefined && choice.group !== groupName) {
+      groupName = choice.group
+      group = document.createElement('div')
+      group.setAttribute('role', 'group')
+      group.setAttribute('aria-label', choice.group)
+      const groupHeading = document.createElement('div')
+      groupHeading.className = cls('choiceGroup')
+      groupHeading.setAttribute('aria-hidden', 'true')
+      groupHeading.textContent = choice.group
+      group.append(groupHeading)
+      menu.append(group)
+    }
     const item = makeControl('choiceItem', `choice-${index}`)
     item.setAttribute('role', 'menuitemradio')
-    item.setAttribute('aria-checked', String(choice === current))
+    item.setAttribute('aria-checked', String(nativeChecks ? choice.checked === true : choice.label === current))
     item.tabIndex = -1
-    item.textContent = choice
+    item.textContent = choice.label
+    if (choice.group !== undefined) item.title = `${choice.group} · ${choice.label}`
     item.addEventListener('click', () => { onPick(choice) })
+    group.append(item)
     return item
   })
   if (items.length === 0) {
@@ -1268,7 +1463,6 @@ function createChoiceMenu(
     empty.textContent = labels.empty
     menu.append(empty)
   }
-  menu.append(...items)
   const focusAt = (index: number): void => {
     if (items.length === 0) return
     items[(index + items.length) % items.length]!.focus()
@@ -1304,6 +1498,10 @@ export function apply(ctx: Context): void {
   const locale = (ctx as Context & { locale: LocalePort }).locale
   const layout = (ctx as Context & { layout: LayoutPort }).layout
   const sessions = (ctx as Context & { sessions: SessionsPort }).sessions
+  const openSession = (id: string): void => {
+    if (sessions.open !== undefined) sessions.open(id)
+    else (ctx.get('uiWorkspace') as UiWorkspacePort | undefined)?.openSession(id)
+  }
   const originalTitle = document.title
   body.setAttribute('data-dsh-deepcel', '')
 
@@ -1327,7 +1525,7 @@ export function apply(ctx: Context): void {
   let formulaHeight = FORMULA_HEIGHT
   let choiceGeneration = 0
   let workbookSequence = 0
-  let selectionSessionId = sessions.list.getSnapshot().current
+  let selectionSessionId = currentSessionId(sessions.list.getSnapshot())
   const workbookStates: WorkbookTabState[] = []
   let activeWorkbookKey = ''
   let pendingWorkbookKey = ''
@@ -1346,7 +1544,7 @@ export function apply(ctx: Context): void {
   const openWorkbook = (state: WorkbookTabState): void => {
     activeWorkbookKey = state.key
     renderWorkbookTabs()
-    if (state.sessionId !== undefined) sessions.open(state.sessionId)
+    if (state.sessionId !== undefined) openSession(state.sessionId)
     else if (state.source?.isConnected === true) state.source.click()
     else if (state.blank) clickNativeButton([], ['新建会话', 'New session'])
   }
@@ -1364,7 +1562,7 @@ export function apply(ctx: Context): void {
       const fallback = workbookStates[Math.min(index, workbookStates.length - 1)]!
       activeWorkbookKey = fallback.key
       renderWorkbookTabs()
-      if (fallback.sessionId !== undefined) sessions.open(fallback.sessionId)
+      if (fallback.sessionId !== undefined) openSession(fallback.sessionId)
       else if (fallback.source?.isConnected === true) fallback.source.click()
       else clickNativeButton([], ['新建会话', 'New session'])
       return
@@ -1431,7 +1629,7 @@ export function apply(ctx: Context): void {
       return
     }
     const title = currentSessionTitle(header) || labels.newWorkbook
-    const sessionId = sessions.list.getSnapshot().current
+    const sessionId = currentSessionId(sessions.list.getSnapshot())
     const source = selectedNativeSessionRow()
     let state = sessionId === undefined
       ? undefined
@@ -1496,8 +1694,8 @@ export function apply(ctx: Context): void {
       choiceMenu = createChoiceMenu(kind, anchor, labels, choices, currentChoice(kind), (choice) => {
         closeChoiceMenu(true)
         const applied = kind === 'workspace' || kind === 'preset'
-          ? applyHeroChoice(kind, choice)
-          : kind === 'permission' ? applyPermissionChoice(choice) : applyModelChoice(kind, choice)
+          ? applyHeroChoice(kind, choice.label)
+          : kind === 'permission' ? applyPermissionChoice(choice.label) : applyModelChoice(kind, choice)
         void applied.then(scheduleShellSync)
       }, closeChoiceMenu)
       body.append(choiceMenu)
@@ -1515,6 +1713,28 @@ export function apply(ctx: Context): void {
   // Proxies for native view tabs and global panels are kept per index, so a
   // selection change updates the pressed state in place and keeps focus.
   const viewProxies: HTMLButtonElement[] = []
+  // Agent Teams renders its trigger in the session header. The native trigger
+  // keeps its hover card, dismissal and focus return; CSS lays it over this
+  // Home ribbon slot, measured after every ribbon render.
+  const teamSlot = makeCell('teamSlot', '')
+  teamSlot.dataset.skinControl = 'team-slot'
+  teamSlot.setAttribute('aria-hidden', 'true')
+  const projectTeam = (team: HTMLElement | null): void => {
+    for (const node of document.querySelectorAll<HTMLElement>('[data-deepcel-team-projected]')) {
+      if (node !== team || !teamSlot.isConnected) delete node.dataset.deepcelTeamProjected
+    }
+    if (team === null || !teamSlot.isConnected) return
+    const rect = teamSlot.getBoundingClientRect()
+    const geometry: readonly [string, number][] = [
+      ['--deepcel-team-x', rect.left], ['--deepcel-team-y', rect.top],
+      ['--deepcel-team-w', rect.width], ['--deepcel-team-h', rect.height],
+    ]
+    for (const [name, value] of geometry) {
+      const next = `${Math.round(value)}px`
+      if (body.style.getPropertyValue(name) !== next) body.style.setProperty(name, next)
+    }
+    team.dataset.deepcelTeamProjected = ''
+  }
   const panelProxies: HTMLButtonElement[] = []
   const nativeViewTabs = (): HTMLButtonElement[] =>
     [...activeSessionHeader()?.querySelectorAll<HTMLButtonElement>("[role='tablist'] [role='tab']") ?? []]
@@ -1576,9 +1796,9 @@ export function apply(ctx: Context): void {
     syncWorkbookTabs()
   }
   const syncShell = (): void => {
-    const currentSessionId = sessions.list.getSnapshot().current
-    if (currentSessionId !== selectionSessionId) {
-      selectionSessionId = currentSessionId
+    const activeSessionId = currentSessionId(sessions.list.getSnapshot())
+    if (activeSessionId !== selectionSessionId) {
+      selectionSessionId = activeSessionId
       worksheet.clear()
     }
     const shell = findShellParts()
@@ -1593,7 +1813,74 @@ export function apply(ctx: Context): void {
       body.style.setProperty('--deepcel-sidebar-offset', offsetValue)
     }
     sidebarControl.setAttribute('aria-pressed', String(sidebarOpen))
+    const insetEnd = `${captionInsetEnd()}px`
+    if (body.style.getPropertyValue('--deepcel-caption-inset-end') !== insetEnd) {
+      body.style.setProperty('--deepcel-caption-inset-end', insetEnd)
+    }
+    // The desktop caption menubar follows Quick Access on the title row.
+    const menuStart = `${Math.ceil(controls.quickNewSession.getBoundingClientRect().right)}px`
+    if (body.style.getPropertyValue('--dsh-windows-menu-start') !== menuStart) {
+      body.style.setProperty('--dsh-windows-menu-start', menuStart)
+    }
+    styleWindowsMenu()
+    syncAccount()
     syncCopy()
+  }
+  // Excel shows the signed-in picture at the right end of the title bar. The
+  // native account launcher keeps its menu and dialogs; CSS moves its anchor
+  // there, and the open menu drops below the title row instead of above it.
+  const syncAccount = (): void => {
+    const trigger = nativeAccountTrigger()
+    const anchor = trigger?.parentElement ?? null
+    for (const node of document.querySelectorAll<HTMLElement>('[data-deepcel-account-anchor]')) {
+      if (node !== anchor) delete node.dataset.deepcelAccountAnchor
+    }
+    if (anchor !== null) anchor.dataset.deepcelAccountAnchor = ''
+    const width = anchor === null ? '0px' : '40px'
+    if (body.style.getPropertyValue('--deepcel-account-width') !== width) {
+      body.style.setProperty('--deepcel-account-width', width)
+    }
+    const menu = trigger?.getAttribute('aria-expanded') === 'true'
+      ? [...document.querySelectorAll<HTMLElement>("body > [role='menu']")].findLast(node => !node.matches('[data-skin-chrome]'))
+      : undefined
+    for (const node of document.querySelectorAll<HTMLElement>('[data-deepcel-account-menu]')) {
+      if (node !== menu) delete node.dataset.deepcelAccountMenu
+    }
+    if (menu !== undefined) menu.dataset.deepcelAccountMenu = ''
+  }
+  // Electron composes window drag regions from geometry in document order, not
+  // stacking: the skin chrome follows #root, so a drag rule on the whole title
+  // row would override the header actions and account picture that #root
+  // projects onto it. The drag band spans only the free stretch between them.
+  let dragRecallFrame: number | undefined
+  const syncDragBand = (): void => {
+    const edge = (element: Element | null | undefined, side: 'left' | 'right'): number | undefined => {
+      const rect = element?.getBoundingClientRect()
+      return rect === undefined || rect.width === 0 ? undefined : rect[side]
+    }
+    const start = Math.max(
+      edge(controls.quickNewSession, 'right') ?? 0,
+      edge(document.querySelector('body > [data-windows-menu]'), 'right') ?? 0,
+    )
+    const end = Math.min(
+      edge(document.querySelector('[data-deepcel-header-source]'), 'left') ?? Infinity,
+      edge(document.querySelector('[data-deepcel-account-anchor]'), 'left') ?? Infinity,
+      window.innerWidth - captionInsetEnd(),
+    )
+    const startValue = `${Math.ceil(start)}px`
+    const endValue = `${Math.max(0, Math.ceil(window.innerWidth - end))}px`
+    if (body.style.getPropertyValue('--deepcel-drag-start') === startValue
+      && body.style.getPropertyValue('--deepcel-drag-end') === endValue) return
+    body.style.setProperty('--deepcel-drag-start', startValue)
+    body.style.setProperty('--deepcel-drag-end', endValue)
+    // A moved region keeps its old rect until a computed app-region value
+    // changes (electron#32341); flip the band for one frame to recollect.
+    controls.titleDrag.dataset.dragRecall = ''
+    if (dragRecallFrame !== undefined) cancelAnimationFrame(dragRecallFrame)
+    dragRecallFrame = requestAnimationFrame(() => {
+      dragRecallFrame = undefined
+      delete controls.titleDrag.dataset.dragRecall
+    })
   }
   const toolGroup = (label: string, items: readonly HTMLElement[]): HTMLElement => {
     const group = document.createElement('div')
@@ -1645,7 +1932,8 @@ export function apply(ctx: Context): void {
         ? [controls.workspace, controls.preset]
         : []
       const run = [controls.model, ...(models.thinking === '' ? [] : [controls.thinking]), controls.permission]
-      desired.push([labels.groupTarget, target], [labels.groupRun, run])
+      const team = conversationHeader()?.querySelector('[data-team-action]') ? [teamSlot] : []
+      desired.push([labels.groupTarget, target], [labels.groupRun, run], [labels.groupTeam, team])
     } else {
       const views = (header === null ? [] : nativeViewTabs()).map((source, index) => {
         const proxy = proxyAt(viewProxies, index, `view-${index}`, () => nativeViewTabs()[index])
@@ -1666,6 +1954,7 @@ export function apply(ctx: Context): void {
       controls.tools.replaceChildren(...groups.map(([label, items]) => toolGroup(label, items)))
       controls.tools.dataset.ribbonSignature = toolsSignature
     }
+    projectTeam(conversationHeader()?.querySelector<HTMLElement>('[data-team-action]') ?? null)
     syncWorkbookTabs()
 
     const projected = conversationHeader()
@@ -1678,7 +1967,7 @@ export function apply(ctx: Context): void {
   }
   const resizeFormulaInput = (): void => {
     body.style.setProperty('--deepcel-formula-height', `${FORMULA_HEIGHT}px`)
-    body.style.setProperty('--deepcel-ribbon-height', `${RIBBON_HEIGHT}px`)
+    body.style.setProperty('--deepcel-ribbon-height', `${RIBBON_HEIGHT + captionExtraHeight()}px`)
     const contentHeight = formulaInput === null
       ? FORMULA_HEIGHT
       : Math.max(FORMULA_HEIGHT, formulaInput.scrollHeight)
@@ -1691,13 +1980,34 @@ export function apply(ctx: Context): void {
     const totalHeight = nextHeight + (formulaInput === null ? 0 : attachmentHeight)
     body.style.setProperty('--deepcel-editor-height', `${nextHeight}px`)
     body.style.setProperty('--deepcel-formula-height', `${totalHeight}px`)
-    body.style.setProperty('--deepcel-ribbon-height', `${RIBBON_HEIGHT + totalHeight - FORMULA_HEIGHT}px`)
+    body.style.setProperty('--deepcel-ribbon-height', `${RIBBON_HEIGHT + captionExtraHeight() + totalHeight - FORMULA_HEIGHT}px`)
     formulaInput?.toggleAttribute('data-deepcel-formula-overflow', contentHeight > nextHeight)
     if (formulaHeight === totalHeight) return
     formulaHeight = totalHeight
     fillRowCoordinates(rows)
     worksheet.resize()
   }
+  const formulaResizeObserver = typeof ResizeObserver === 'undefined'
+    ? undefined
+    : new ResizeObserver(() => { resizeFormulaInput() })
+  // Lexical keeps the caret visible by scrolling every scrollable ancestor.
+  // The formula bar is fixed above the transcript, so each edit would roll the
+  // conversation upward; ancestors outside the editor return to their offset.
+  const onFormulaEdit = (event: Event): void => {
+    if (formulaInput === null || !event.composedPath().includes(formulaInput)) return
+    if (event instanceof KeyboardEvent && !(event.key === 'Enter' && event.shiftKey)) return
+    const saved: [HTMLElement, number][] = []
+    const editorScroll = formulaInput.closest<HTMLElement>('[data-input-scroll]') ?? formulaInput
+    for (let node = editorScroll.parentElement; node !== null; node = node.parentElement) {
+      if (node.scrollHeight > node.clientHeight) saved.push([node, node.scrollTop])
+    }
+    requestAnimationFrame(() => {
+      for (const [node, top] of saved) {
+        if (node.isConnected && node.scrollTop !== top) node.scrollTop = top
+      }
+    })
+  }
+  for (const type of ['beforeinput', 'paste', 'keydown']) document.addEventListener(type, onFormulaEdit, true)
   const syncFormulaInput = (): void => {
     const next = activeComposer()?.querySelector<HTMLElement>('[data-composer-input]') ?? null
     const nextOwner = next?.closest<HTMLElement>('[data-composer-seat]') ?? null
@@ -1709,8 +2019,12 @@ export function apply(ctx: Context): void {
     }
     if (next !== formulaInput) {
       formulaInput?.removeEventListener('input', resizeFormulaInput)
+      if (formulaInput !== null) formulaResizeObserver?.unobserve(formulaInput)
       formulaInput = next
       formulaInput?.addEventListener('input', resizeFormulaInput)
+      // Lexical applies a paste or an append to an existing text node without
+      // an input event or a childList mutation; the editor's own box still grows.
+      if (formulaInput !== null) formulaResizeObserver?.observe(formulaInput)
     }
     if (next !== null) next.dataset.deepcelFormulaInput = ''
     if (nextOwner !== null) nextOwner.dataset.deepcelFormulaOwner = ''
@@ -1726,8 +2040,8 @@ export function apply(ctx: Context): void {
   const closeAddins = (): void => {
     if (layout.selectPanel !== undefined) layout.selectPanel(null)
     else {
-      const current = sessions.list.getSnapshot().current
-      if (current !== undefined) sessions.open(current)
+      const current = currentSessionId(sessions.list.getSnapshot())
+      if (current !== undefined) openSession(current)
     }
   }
   addins.close.addEventListener('click', closeAddins)
@@ -1752,6 +2066,7 @@ export function apply(ctx: Context): void {
       concealNativeEntrypoints()
       syncShell()
       syncRibbon()
+      syncDragBand()
       syncFormulaInput()
       syncAddins()
     })
@@ -1800,6 +2115,7 @@ export function apply(ctx: Context): void {
     workbook.removeEventListener('deepcel-ribbon-change', onRibbonChange)
     shellObserver.disconnect()
     if (shellFrame !== undefined) cancelAnimationFrame(shellFrame)
+    if (dragRecallFrame !== undefined) cancelAnimationFrame(dragRecallFrame)
     unsubscribeLocale()
     for (const button of document.querySelectorAll<HTMLElement>('[data-deepcel-native-proxy]')) {
       delete button.dataset.deepcelNativeProxy
@@ -1821,6 +2137,18 @@ export function apply(ctx: Context): void {
       delete source.dataset.deepcelHeroChoiceSource
     }
     formulaInput?.removeEventListener('input', resizeFormulaInput)
+    formulaResizeObserver?.disconnect()
+    for (const type of ['beforeinput', 'paste', 'keydown']) document.removeEventListener(type, onFormulaEdit, true)
+    for (const node of document.querySelectorAll<HTMLElement>('[data-deepcel-account-anchor]')) {
+      delete node.dataset.deepcelAccountAnchor
+    }
+    for (const node of document.querySelectorAll<HTMLElement>('[data-deepcel-account-menu]')) {
+      delete node.dataset.deepcelAccountMenu
+    }
+    for (const node of document.querySelectorAll<HTMLElement>('[data-deepcel-team-projected]')) {
+      delete node.dataset.deepcelTeamProjected
+    }
+    unstyleWindowsMenu()
     closeChoiceMenu()
     body.removeAttribute('data-dsh-deepcel')
     delete body.dataset.deepcelSidebar
@@ -1829,6 +2157,14 @@ export function apply(ctx: Context): void {
     body.style.removeProperty('--deepcel-formula-height')
     body.style.removeProperty('--deepcel-editor-height')
     body.style.removeProperty('--deepcel-ribbon-height')
+    body.style.removeProperty('--dsh-windows-menu-start')
+    body.style.removeProperty('--deepcel-caption-inset-end')
+    body.style.removeProperty('--deepcel-account-width')
+    body.style.removeProperty('--deepcel-drag-start')
+    body.style.removeProperty('--deepcel-drag-end')
+    for (const name of ['--deepcel-team-x', '--deepcel-team-y', '--deepcel-team-w', '--deepcel-team-h']) {
+      body.style.removeProperty(name)
+    }
     worksheet.dispose()
     workbook.remove()
     rows.remove()

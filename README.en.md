@@ -8,12 +8,14 @@ manages files, sessions and run options; messages, tools, trajectory and the
 composer fall into one uniform cell grid; workbook tabs carry multi-session
 switching.
 
-Target host: DSH `0.1.7-rc.2` (optional peer `@deepseek-ai/dsh
+Target host: DSH `0.2.0-rc.2` (optional peer `@deepseek-ai/dsh
 >=0.1.7-rc.1 <0.3.0-0`). The formula bar keeps the native Lexical editor,
 attachments, commands and send controls. The conversation header, right
 sidebar, process groups, turn navigation and statistics dialogs adopt
 worksheet styling. Checked in an isolated 0.1.7-rc.2 instance with a local mock
 model: light/dark themes, narrow windows, ribbon menus, folding and tables.
+The 0.2.0-rc.2 adaptations (provider-grouped model menu, Windows desktop
+title bar, session snapshot) were checked against host source and automated tests.
 
 ## Features
 
